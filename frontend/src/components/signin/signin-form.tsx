@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import {useState, useEffect} from 'react'
 import Link from "next/link"
@@ -8,7 +8,7 @@ import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card"
 import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
-import {createSupabaseClient} from "@/lib/utils";
+import {createSupabaseClient} from "@/app/supabase";
 
 export default function Component() {
     const [mounted, setMounted] = useState(false)

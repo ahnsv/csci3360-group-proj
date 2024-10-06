@@ -2,7 +2,7 @@
 
 import {useState, useEffect} from 'react'
 import Link from "next/link"
-import {Github, Mail} from "lucide-react"
+import {Github, Chrome} from "lucide-react"
 
 import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card"
@@ -58,7 +58,11 @@ export default function Component() {
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <Button variant="outline">
+                            <Button variant="outline" onClick={() =>
+                                supabase.auth.signInWithOAuth({
+                                    provider: 'github',
+                                })
+                            }>
                                 <Github className="mr-2 h-4 w-4"/>
                                 Github
                             </Button>
@@ -67,7 +71,7 @@ export default function Component() {
                                     provider: 'google',
                                 })
                             }}>
-                                <Mail className="mr-2 h-4 w-4"/>
+                                <Chrome className="mr-2 h-4 w-4"/>
                                 Google
                             </Button>
                         </div>

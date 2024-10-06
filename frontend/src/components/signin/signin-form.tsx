@@ -13,10 +13,24 @@ import {createSupabaseClient} from "@/app/supabase";
 export default function Component() {
     const [mounted, setMounted] = useState(false)
     const supabase = createSupabaseClient()
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+    const [message, setMessage] = useState("")
 
     useEffect(() => {
         setMounted(true)
     }, [])
+
+    const handleLoginButtonClick = async () => {
+        const {data: {user}, error} = await supabase.auth.signInWithPassword({
+            email,
+            password
+        })
+        console.log({user, error})
+        if (!!error) {
+            setMessage(error.message)
+        }
+    }
 
     return (
         <div className="flex min-h-screen">
@@ -31,7 +45,7 @@ export default function Component() {
                     </h1>
                 </div>
             </div>
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-100">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-100 select-none">
                 <Card className="w-full max-w-md">
                     <CardHeader className="space-y-1">
                         <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
@@ -42,13 +56,15 @@ export default function Component() {
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input id="email" placeholder="m@example.com" required type="email"/>
+                            <Input id="email" placeholder="m@example.com" required type="email"
+                                   onChange={(e) => setEmail(e.target.value)}/>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
-                            <Input id="password" required type="password"/>
+                            <Input id="password" required type="password"
+                                   onChange={(e) => setPassword(e.target.value)}/>
                         </div>
-                        <Button className="w-full">Login</Button>
+                        <Button className="w-full" onClick={handleLoginButtonClick}>Login</Button>
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
                                 <span className="w-full border-t"/>
@@ -75,6 +91,15 @@ export default function Component() {
                                 Google
                             </Button>
                         </div>
+                        {
+                            message && (
+                                <div className="w-full border-2 p-2 rounded border-red-500">
+                                    <span className="text-red-500 tracking-tighter">
+                                        {message}
+                                    </span>
+                                </div>
+                            )
+                        }
                     </CardContent>
                     <CardFooter className="flex flex-wrap items-center justify-between gap-2">
                         <div className="text-sm text-muted-foreground">

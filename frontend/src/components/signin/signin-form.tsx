@@ -77,14 +77,20 @@ export default function Component() {
                             <Button variant="outline" onClick={() =>
                                 supabase.auth.signInWithOAuth({
                                     provider: 'github',
+                                    options: {
+                                        redirectTo: `${location.origin}/auth/callback`
+                                    }
                                 })
                             }>
                                 <Github className="mr-2 h-4 w-4"/>
                                 Github
                             </Button>
-                            <Button variant="outline" onClick={() => {
-                                supabase.auth.signInWithOAuth({
+                            <Button variant="outline" onClick={async () => {
+                                await supabase.auth.signInWithOAuth({
                                     provider: 'google',
+                                    options: {
+                                        redirectTo: `${location.origin}/auth/callback`,
+                                    }
                                 })
                             }}>
                                 <Chrome className="mr-2 h-4 w-4"/>

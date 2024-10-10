@@ -8,7 +8,7 @@ import {Button} from "@/components/ui/button"
 import {Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle} from "@/components/ui/card"
 import {Input} from "@/components/ui/input"
 import {Label} from "@/components/ui/label"
-import {createSupabaseClient} from "@/app/supabase";
+import {createSupabaseClient} from "@/lib/supabase/client";
 
 export default function Component() {
     const [mounted, setMounted] = useState(false)
@@ -26,7 +26,6 @@ export default function Component() {
             email,
             password
         })
-        console.log({user, error})
         if (!!error) {
             setMessage(error.message)
         }

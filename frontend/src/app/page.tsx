@@ -1,7 +1,7 @@
 import ChatScheduler from "@/components/chatroom/chat-scheduler";
 import {redirect} from "next/navigation";
+import {createServerSupabaseClient} from "@/lib/supabase/server";
 
-import {createServerSupabaseClient} from "@/app/supabase.server";
 
 export default async function Home() {
     const supabase = createServerSupabaseClient()

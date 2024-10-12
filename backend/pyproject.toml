@@ -11,6 +11,8 @@ google-auth-oauthlib = "^1.2.1"
 google-auth-httplib2 = "^0.2.0"
 google-api-python-client = "^2.149.0"
 fastapi = "^0.115.0"
+httpx = "^0.27.2"
+pydantic-settings = "^2.5.2"
 
 
 [tool.poetry.group.dev.dependencies]

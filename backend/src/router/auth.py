@@ -29,7 +29,7 @@ async def oauth2callback(code: str):
     credentials = flow.credentials
 
     try:
-        service = build('calendar', 'v3', credentials=credentials)
+        build('calendar', 'v3', credentials=credentials)
         # You can now use the 'service' object to interact with the Google Calendar API
         return {"message": "Authentication successful"}
     except Exception as e:

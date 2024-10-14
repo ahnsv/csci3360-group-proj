@@ -2,7 +2,6 @@
 from datetime import datetime, timezone, timedelta  
 from typing import Annotated, Any
 from fastapi import Depends
-from google.oauth2 import service_account
 import httpx
 from src.settings import Settings, settings
 
@@ -39,7 +38,7 @@ class CanvasClient:
         return response.json()
 
 
-    async def get_upcoming_assignments(self, n_days: int = 7, start_date: datetime = None, end_date: datetime = None) -> list[dict[str, Any]]:
+    async def get_upcoming_tasks(self, n_days: int = 7, start_date: datetime = None, end_date: datetime = None) -> list[dict[str, Any]]:
         if start_date is None:
             start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=timezone.utc)
         if end_date is None:
@@ -70,12 +69,14 @@ class Container:
 container = Annotated[Container, Depends(lambda: Container(settings))]
 
 
-# async def main():
-#     container = Container(settings)
-#     await container.canvas_client.update_api_token("")
-#     assignments = await container.canvas_client.get_upcoming_assignments()
-#     print(assignments)
+async def main():
+    from src.application.usecase import list_upcoming_tasks
 
-# if __name__ == "__main__":
-#     import asyncio
-#     asyncio.run(main())
+    container = Container(settings)
+    await container.canvas_client.update_api_token("1019~KMtmc8fEWxPNtzWt84TWYJwZ2raHTW3tCy82zuYBKRrFw2wZXvuUMZfezZGVTGLt")
+    assignments = await list_upcoming_tasks(n_days=7, canvas_client=container.canvas_client)
+    print(assignments)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

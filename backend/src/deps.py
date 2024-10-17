@@ -27,7 +27,7 @@ class CanvasApiError(ExternalApiError):
 class GoogleCalendarClient:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.client = httpx.AsyncClient(base_url=settings.google_calendar_api_url)
+        self.client = httpx.AsyncClient()
 
     async def update_api_token(self, token: str):
         self.client.headers["Authorization"] = f"Bearer {token}"
@@ -69,12 +69,12 @@ class OpenAIClient:
 # dependency injection container
 class Container:
     def __init__(self, settings: Settings):
-        self.google_calendar_client = GoogleCalendarClient()
+        self.google_calendar_client = GoogleCalendarClient(settings)
         self.canvas_client = CanvasClient(settings=settings)
         self.openai_client = OpenAIClient()
 
 
-container = Annotated[Container, Depends(lambda: Container(settings))]
+ApplicationContainer = Annotated[Container, Depends(lambda: Container(settings))]
 
 
 def get_flow():

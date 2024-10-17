@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from openai import AsyncOpenAI
 from pydantic import BaseModel
 
+from src.deps import ApplicationContainer
 from src.application.openai import chat_with_schedule_agent, OpenAIAClient
 
 
@@ -19,6 +20,6 @@ class ChatResponse(BaseModel):
     sent_at: datetime
 
 @router.post("/", response_model=ChatResponse)
-async def chat(request: ChatRequest, aclient: OpenAIAClient):
-    message = await chat_with_schedule_agent(aclient, request.message)
+async def chat(request: ChatRequest, aclient: OpenAIAClient, container: ApplicationContainer):
+    message = await chat_with_schedule_agent(aclient, request.message, container)
     return {"message": message, "author": request.author, "sent_at": request.sent_at}

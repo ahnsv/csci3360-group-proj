@@ -1,9 +1,12 @@
 # client to interact with google calendar
-from datetime import datetime, timezone, timedelta  
+from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
-from fastapi import Depends
+
 import httpx
+from fastapi import Depends
+
 from src.settings import Settings, settings
+
 
 class ExternalApiError(Exception):
     def __init__(self, status_code: int, message: str):
@@ -22,7 +25,12 @@ class CanvasApiError(ExternalApiError):
 
 
 class GoogleCalendarClient:
-    ...
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.client = httpx.AsyncClient(base_url=settings.google_calendar_api_url)
+
+    async def update_api_token(self, token: str):
+        self.client.headers["Authorization"] = f"Bearer {token}"
 
 # client to interact with canvas api
 class CanvasClient:
@@ -68,6 +76,15 @@ class Container:
 
 container = Annotated[Container, Depends(lambda: Container(settings))]
 
+
+def get_flow():
+    from google_auth_oauthlib.flow import Flow
+
+    return Flow.from_client_secrets_file(
+        settings.client_secrets_file,
+        scopes=settings.scopes,
+        redirect_uri=settings.redirect_uri
+    )
 
 async def main():
     from src.application.usecase import list_upcoming_tasks

@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from src.deps import CanvasClient, GoogleCalendarClient
 
+
 class Course(BaseModel):
     name: str
     canvas_id: int
@@ -41,7 +42,7 @@ async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> Acade
 
     for task in tasks_raw:
         if task["plannable_type"] == "assignment":
-            if task["submissions"]["submitted"] == True:
+            if task["submissions"]["submitted"] is True:
                 continue
             assignments.append(Assignment(name=task["plannable"]["title"], due_date=task["plannable"]["due_at"], course_id=task["course_id"]))
         elif task["plannable_type"] == "quiz":

@@ -1,8 +1,9 @@
-from pytest import fixture
 import pytest
+from pytest import fixture
 
-from src.settings import Settings
 from src.deps import CanvasApiError, CanvasClient
+from src.settings import Settings
+
 
 @fixture
 def settings_in_test():

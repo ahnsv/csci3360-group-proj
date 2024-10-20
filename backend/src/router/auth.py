@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+from pydantic import BaseModel
 from starlette.requests import Request
 
-from src.deps import get_flow
+from src.deps import ApplicationContainer, get_flow
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,3 +35,22 @@ async def google_status():
     # In a real application, you would check if the user has valid Google credentials
     # For this example, we'll just return a mock status
     return {"connected": True}
+
+class CanvasConnectIn(BaseModel):
+    token: str
+
+class CanvasConnectOut(BaseModel):
+    success: bool
+    message: str
+
+@router.post("/canvas/connect", response_model=CanvasConnectOut)
+async def canvas_connect(request: CanvasConnectIn, container: ApplicationContainer):
+    canvas_client = container.canvas_client
+    canvas_client.update_api_token(request.token)
+
+    try:
+        # Test the connection by fetching courses
+        courses = await canvas_client.list_registered_courses()
+        return {"success": True, "message": "Successfully connected to Canvas API"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

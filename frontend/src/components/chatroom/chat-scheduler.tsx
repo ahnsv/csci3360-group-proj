@@ -9,16 +9,14 @@ import {Input} from "@/components/ui/input"
 import {Calendar} from "@/components/ui/calendar"
 import {Card, CardContent} from "@/components/ui/card"
 import {Send} from "lucide-react"
+import { chatWithScheduler } from '@/app/_api/chat';
 
 export default function ChatScheduler() {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
-
-    // Mock chat messages
-    const chatMessages = [
-        {sender: 'AI', message: 'Hello! How can I assist you today?'},
-        {sender: 'User', message: 'I need help scheduling a meeting.'},
-        {sender: 'AI', message: 'What date and time would you prefer?'},
-    ]
+    const [chatMessages, setChatMessages] = React.useState([
+        {author: 'agent', message: 'Hello! How can I assist you today?', sent_at: new Date()}
+    ])
+    const [inputMessage, setInputMessage] = React.useState('')
 
     // Mock schedule data
     const schedules = [
@@ -27,25 +25,47 @@ export default function ChatScheduler() {
         {id: 3, title: 'Client Call', date: '2023-05-17', time: '11:30 AM'},
     ]
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!inputMessage.trim()) return
+
+        // Add user message to chat
+        const userMessage = {author: 'User', message: inputMessage, sent_at: new Date()}
+        setChatMessages(prev => [...prev, userMessage])
+
+        // Clear input
+        setInputMessage('')
+
+        try {
+            // Send message to server and get response
+            const aiResponse = await chatWithScheduler(inputMessage)
+            setChatMessages(prev => [...prev, aiResponse])
+        } catch (error) {
+            console.error('Error sending message:', error)
+            // Optionally, add an error message to the chat
+            setChatMessages(prev => [...prev, {author: 'AI', message: 'Sorry, there was an error processing your request.', sent_at: new Date()}])
+        }
+    }
+
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen bg-gray-100 text-sm tracking-tight">
             {/* Chat Interface */}
             <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
                 <ScrollArea className="flex-grow p-4">
                     {chatMessages.map((msg, index) => (
                         <div key={index}
-                             className={`flex items-start mb-4 ${msg.sender === 'User' ? 'justify-end' : ''}`}>
-                            {msg.sender === 'AI' && (
+                             className={`flex items-start mb-4 ${msg.author === 'User' ? 'justify-end' : ''}`}>
+                            {msg.author === 'agent' && (
                                 <Avatar className="mr-2">
                                     <AvatarImage src="/placeholder.svg?height=40&width=40" alt="AI"/>
                                     <AvatarFallback>AI</AvatarFallback>
                                 </Avatar>
                             )}
                             <div
-                                className={`rounded-lg p-2 max-w-[70%] ${msg.sender === 'User' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                                className={`rounded-lg p-2 max-w-[70%] ${msg.author === 'User' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
                                 {msg.message}
                             </div>
-                            {msg.sender === 'User' && (
+                            {msg.author === 'User' && (
                                 <Avatar className="ml-2">
                                     <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User"/>
                                     <AvatarFallback>U</AvatarFallback>
@@ -55,8 +75,14 @@ export default function ChatScheduler() {
                     ))}
                 </ScrollArea>
                 <div className="p-4 border-t border-gray-200">
-                    <form className="flex items-center">
-                        <Input type="text" placeholder="Type your message..." className="flex-grow mr-2"/>
+                    <form className="flex items-center" onSubmit={handleSubmit}>
+                        <Input 
+                            type="text" 
+                            placeholder="Type your message..." 
+                            className="flex-grow mr-2"
+                            value={inputMessage}
+                            onChange={(e) => setInputMessage(e.target.value)}
+                        />
                         <Button type="submit" size="icon">
                             <Send className="h-4 w-4"/>
                         </Button>

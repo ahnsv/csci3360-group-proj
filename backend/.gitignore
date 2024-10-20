@@ -1,1 +1,2 @@
 .env*local
+client_secret_*.json

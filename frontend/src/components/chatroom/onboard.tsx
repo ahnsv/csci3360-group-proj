@@ -1,135 +1,157 @@
-'use client'
+"use client"
 
-import {useState} from 'react'
-import {Check, ArrowRight} from 'lucide-react'
-import {Button} from "@/components/ui/button"
-import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
-} from "@/components/ui/accordion"
-import {RadioGroup, RadioGroupItem} from "@/components/ui/radio-group"
-import {Label} from "@/components/ui/label"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar, Check } from "lucide-react"
+import { API_URL } from "@/app/_api/chat"
+import { useGoogleAuth } from "@/hooks/useGoogleAuth"
 
 export default function OnboardingSteps() {
-    const [completedSteps, setCompletedSteps] = useState({
-        googleCalendar: false,
-        canvasAPI: false,
-        personalPreference: false,
-    })
+  const [currentStep, setCurrentStep] = useState(0)
+  const [canvasApiToken, setCanvasApiToken] = useState("")
+  const { isConnected, isLoading, error, connectGoogleCalendar } = useGoogleAuth('/onboarding')
 
-    const [schedulePreference, setSchedulePreference] = useState('')
+  const steps = [
+    { title: "Welcome", description: "Start your onboarding process" },
+    { title: "Connect Google Calendar", description: "Sync your schedule" },
+    { title: "Connect Canvas API", description: "Access your course information" },
+    { title: "All Set!", description: "You're ready to go" },
+  ]
 
-    const handleStepComplete = (step: keyof typeof completedSteps) => {
-        setCompletedSteps(prev => ({...prev, [step]: true}))
-    }
+  const handleCanvasApiConnect = () => {
+    // In a real application, this would validate the API token
+    console.log("Connecting to Canvas API with token:", canvasApiToken)
+    // Simulating successful connection after a delay
+    setTimeout(() => {
+      setCurrentStep(currentStep + 1)
+    }, 1500)
+  }
 
-    const handleSchedulePreference = (value: string) => {
-        setSchedulePreference(value)
-        handleStepComplete('personalPreference')
-    }
-
-    const allStepsCompleted = Object.values(completedSteps).every(Boolean)
-
-    return (
-        <div className="max-w-2xl mx-auto p-6">
-            <h1 className="text-3xl font-bold mb-6">Welcome to Our Platform</h1>
-            <p className="text-lg mb-8">Let's get you set up with the required integrations and preferences.</p>
-
-            <Accordion type="single" collapsible className="mb-8">
-                <AccordionItem value="google-calendar">
-                    <AccordionTrigger className="flex items-center">
-                        {completedSteps.googleCalendar && (
-                            <Check className="w-5 h-5 text-green-500 mr-2"/>
-                        )}
-                        Connect Google Calendar
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <div className="space-y-4">
-                            <p>Follow these steps to connect your Google Calendar:</p>
-                            <ol className="list-decimal list-inside">
-                                <li>Click the "Connect Google Calendar" button below</li>
-                                <li>Sign in to your Google account</li>
-                                <li>Grant the necessary permissions</li>
-                            </ol>
-                            <Button onClick={() => handleStepComplete('googleCalendar')}>
-                                Connect Google Calendar
-                            </Button>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="canvas-api">
-                    <AccordionTrigger className="flex items-center">
-                        {completedSteps.canvasAPI && (
-                            <Check className="w-5 h-5 text-green-500 mr-2"/>
-                        )}
-                        Connect Canvas API
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <div className="space-y-4">
-                            <p>Follow these steps to connect the Canvas API:</p>
-                            <ol className="list-decimal list-inside">
-                                <li>Log in to your Canvas account</li>
-                                <li>Navigate to Settings &gt; Approved Integrations</li>
-                                <li>Generate a new API token</li>
-                                <li>Copy the token and paste it below</li>
-                            </ol>
-                            <div className="flex space-x-2">
-                                <input
-                                    type="text"
-                                    placeholder="Paste your Canvas API token"
-                                    className="flex-grow px-3 py-2 border rounded-md"
-                                />
-                                <Button onClick={() => handleStepComplete('canvasAPI')}>
-                                    Connect Canvas API
-                                </Button>
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="personal-preference">
-                    <AccordionTrigger className="flex items-center">
-                        {completedSteps.personalPreference && (
-                            <Check className="w-5 h-5 text-green-500 mr-2"/>
-                        )}
-                        Tell us more about you
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <div className="space-y-4">
-                            <p>Help us understand your schedule preference:</p>
-                            <RadioGroup value={schedulePreference} onValueChange={handleSchedulePreference}>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="morning" id="morning"/>
-                                    <Label htmlFor="morning">I'm a morning person</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="night" id="night"/>
-                                    <Label htmlFor="night">I'm a night person</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="afternoon" id="afternoon"/>
-                                    <Label htmlFor="afternoon">I'm an afternoon person</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="flexible" id="flexible"/>
-                                    <Label htmlFor="flexible">I'm flexible</Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-
-            <Button
-                className="w-full"
-                disabled={!allStepsCompleted}
-            >
-                <ArrowRight className="w-5 h-5 mr-2"/>
-                Let's talk
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Welcome to Our SaaS Platform</h2>
+            <p className="mb-4">Let's get you set up with your calendar and course information.</p>
+            <Button onClick={() => setCurrentStep(currentStep + 1)}>Get Started</Button>
+          </div>
+        )
+      case 1:
+        return (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Connect Google Calendar</h2>
+            <p className="mb-4">We'll use this to sync your schedule and events.</p>
+            {isLoading ? (
+              <p>Checking connection status...</p>
+            ) : isConnected ? (
+              <div>
+                <Check className="mx-auto h-8 w-8 text-green-500 mb-2" />
+                <p className="text-green-600 mb-4">Google Calendar connected successfully!</p>
+                <Button onClick={() => setCurrentStep(currentStep + 1)}>Next Step</Button>
+              </div>
+            ) : (
+              <>
+                <Button onClick={connectGoogleCalendar}>
+                  <Calendar className="mr-2 h-4 w-4" /> Connect Google Calendar
+                </Button>
+                {error && <p className="text-red-500 mt-2">{error}</p>}
+              </>
+            )}
+          </div>
+        )
+      case 2:
+        return (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Connect Canvas API</h2>
+            <p className="mb-4">Enter your Canvas API token to access your course information.</p>
+            <div className="flex flex-col items-center space-y-4">
+              <div className="w-full max-w-sm">
+                <Label htmlFor="api-token">Canvas API Token</Label>
+                <Input
+                  id="api-token"
+                  type="password"
+                  placeholder="Enter your API token"
+                  value={canvasApiToken}
+                  onChange={(e) => setCanvasApiToken(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleCanvasApiConnect} disabled={!canvasApiToken}>
+                Connect Canvas API
+              </Button>
+            </div>
+          </div>
+        )
+      case 3:
+        return (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">All Set!</h2>
+            <p className="mb-4">You've successfully connected your accounts.</p>
+            <Check className="mx-auto h-16 w-16 text-green-500" />
+            <Button onClick={() => console.log("Onboarding complete!")} className="mt-4">
+              Go to Dashboard
             </Button>
-        </div>
-    )
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle>Onboarding</CardTitle>
+          <CardDescription>Complete these steps to get started</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-8">
+            <div className="flex justify-between">
+              {steps.map((step, index) => (
+                <div key={index} className="flex flex-col items-center">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      index <= currentStep ? "bg-primary text-primary-foreground" : "bg-gray-300"
+                    }`}
+                  >
+                    {index < currentStep ? <Check className="h-5 w-5" /> : index + 1}
+                  </div>
+                  <div className="text-xs mt-2 text-center">
+                    <div className="font-semibold">{step.title}</div>
+                    <div className="text-muted-foreground">{step.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 h-2 bg-gray-200 rounded-full">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-in-out"
+                style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+          {renderStepContent()}
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            disabled={currentStep === 0}
+          >
+            Previous
+          </Button>
+          <Button
+            onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
+            disabled={currentStep === steps.length - 1}
+          >
+            Next
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  )
 }

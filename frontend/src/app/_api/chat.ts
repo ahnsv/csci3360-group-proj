@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
+export const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
 export async function chatWithScheduler(message: string) {
     const response = await fetch(`${API_URL}/chat/`, {

@@ -13,12 +13,12 @@ class Course(BaseModel):
 
 class Assignment(BaseModel):
     name: str
-    due_date: datetime
+    due_date: datetime | None
     course_id: int
 
 class Quiz(BaseModel):
     name: str
-    due_date: datetime
+    due_date: datetime | None
     course_id: int
 
 class AcademicTasks(BaseModel):
@@ -35,7 +35,14 @@ class ClassSchedule(TimeSlot):
     name: str
     course: Course
 
-async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> AcademicTasks:
+async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> dict[str, list[dict]]:
+    """
+    List upcoming tasks from Canvas API.
+
+    :param n_days: Number of days to look ahead for upcoming tasks.
+    :param canvas_client: Canvas client.
+    :return: AcademicTasks.
+    """
     tasks_raw = await canvas_client.get_upcoming_tasks(n_days)
     assignments = []
     quizzes = []
@@ -50,7 +57,8 @@ async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> Acade
         else:
             ...
 
-    return AcademicTasks(assignments=assignments, quizzes=quizzes)
+    tasks = AcademicTasks(assignments=assignments, quizzes=quizzes)
+    return tasks.model_dump(mode="json")
 
 
 def get_class_schedule(calendar_client: GoogleCalendarClient) -> list[ClassSchedule]:

@@ -36,12 +36,14 @@ class GoogleCalendarClient:
 class CanvasClient:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.client = httpx.AsyncClient(base_url=settings.canvas_api_url)
+        self.client = httpx.AsyncClient(base_url=settings.canvas_api_url, headers={"Authorization": f"Bearer {settings.canvas_api_token}"})
 
     async def update_api_token(self, token: str):
         self.client.headers["Authorization"] = f"Bearer {token}"
 
     async def list_registered_courses(self) -> list[dict[str, Any]]:
+        if self.client.headers.get("Authorization") is None:
+            raise CanvasApiError(401, "Unauthorized")
         response = await self.client.get("/api/v1/courses?enrollment_type[]=student&enrollment_state[]=active")
         return response.json()
 
@@ -87,12 +89,12 @@ def get_flow():
     )
 
 async def main():
-    from src.application.usecase import list_upcoming_tasks
+    # from src.application.usecase import list_upcoming_tasks
 
-    container = Container(settings)
-    await container.canvas_client.update_api_token("1019~KMtmc8fEWxPNtzWt84TWYJwZ2raHTW3tCy82zuYBKRrFw2wZXvuUMZfezZGVTGLt")
-    assignments = await list_upcoming_tasks(n_days=7, canvas_client=container.canvas_client)
-    print(assignments)
+    # container = Container(settings)
+    # assignments = await list_upcoming_tasks(n_days=7, canvas_client=container.canvas_client)
+    # print(assignments)
+    ...
 
 if __name__ == "__main__":
     import asyncio

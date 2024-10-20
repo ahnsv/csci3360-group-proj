@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 
-from src.router import chat
-from src.router import auth
+from src.router import auth, chat
 
 app = FastAPI()
 app.include_router(auth.router)

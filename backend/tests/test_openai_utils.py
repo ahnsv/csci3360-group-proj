@@ -1,5 +1,7 @@
 from functools import partial
+
 from src.application.openai_utils import function_to_schema
+
 
 def test_function_to_schema():
     def func(a: int, b: int) -> int:

@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     canvas_api_url: str
-
+    canvas_api_token: str
     # openai
     openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
 

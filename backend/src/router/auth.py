@@ -1,10 +1,9 @@
-from src.deps import get_flow
-from src.settings import settings
-
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
+
+from src.deps import get_flow
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

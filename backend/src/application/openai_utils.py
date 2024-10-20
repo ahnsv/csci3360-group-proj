@@ -1,6 +1,7 @@
 import inspect
-from typing import Any, Callable
 from functools import partial
+from typing import Any, Callable
+
 
 def function_to_schema(func: Callable[..., Any]) -> dict:
     type_map = {

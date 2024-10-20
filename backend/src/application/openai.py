@@ -1,9 +1,11 @@
+from datetime import datetime
 import json
 from functools import partial
 from typing import Annotated
 
 from fastapi import Depends
 from openai import AsyncOpenAI
+from pydantic import BaseModel, Field
 
 from src.application.openai_utils import function_to_schema
 from src.application.usecase import list_upcoming_tasks
@@ -21,7 +23,11 @@ inmemory_chat_history = [
     }
 ]
 
-async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container: Container) -> str:
+class ScheduleAgentChatOutput(BaseModel):
+    message: str
+    actions: list[dict] | None = Field(default_factory=list)
+
+async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
     functions_to_call = {
         "list_upcoming_tasks": partial(list_upcoming_tasks, canvas_client=container.canvas_client)
     }
@@ -34,17 +40,18 @@ async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container
         tool_choice="auto",
     )
     if response.choices[0].message.content is not None:
-      print(response.choices[0].message.content)
-
+        ...
 
     # if not function call
-    if response.choices[0].message.tool_calls is None:
+    if not response.choices[0].message.tool_calls:  # Changed condition
         inmemory_chat_history.append({
             "role": "assistant",
             "content": response.choices[0].message.content,
         })
-        return response.choices[0].message.content
-
+        return ScheduleAgentChatOutput(
+            message=response.choices[0].message.content,
+            actions=[],
+        )
 
     function_call = response.choices[0].message.tool_calls[0]
     function_name = function_call.function.name
@@ -58,13 +65,20 @@ async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container
         "tool_call_id": function_call.id,
     })
 
-    second_response = await aclient.chat.completions.create(
+    second_response = await aclient.beta.chat.completions.parse(
         model="gpt-4o",
         messages=inmemory_chat_history,
+        temperature=0.0,
+        response_format=ScheduleAgentChatOutput,
     )
-    inmemory_chat_history.append(second_response.choices[0].message)
+    inmemory_chat_history.append(
+        {
+            'role': 'assistant',
+            'content': second_response.choices[0].message.content,
+        }
+    )
 
-    return second_response.choices[0].message.content
+    return second_response.choices[0].message.parsed
 
 
 

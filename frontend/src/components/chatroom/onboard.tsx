@@ -1,15 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useCanvasConnect } from "@/app/_api/auth"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Check, Loader2 } from "lucide-react"
 import { useGoogleAuth } from "@/hooks/useGoogleAuth"
+import { Calendar, Check, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { API_URL } from "@/app/_api/constants"
-import { useCanvasConnect, useGoogleConnect } from "@/app/_api/auth"
+import { useState } from "react"
 
 export default function OnboardingSteps() {
   const router = useRouter()

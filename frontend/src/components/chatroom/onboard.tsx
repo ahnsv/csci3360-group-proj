@@ -14,7 +14,7 @@ export default function OnboardingSteps() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [canvasApiToken, setCanvasApiToken] = useState("")
-  const { isConnected, isLoading, error, connectGoogleCalendar } = useGoogleAuth('/onboarding')
+  const { isConnected, isLoading, error, connectGoogleCalendar } = useGoogleAuth('/onboard')
 
   const steps = [
     { title: "Welcome", description: "Start your onboarding process" },

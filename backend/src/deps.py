@@ -2,9 +2,14 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 
-import httpx
-from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
+import httpx
+from fastapi import Depends, HTTPException
+from supabase_auth import AsyncGoTrueClient
+from google_auth_oauthlib.flow import Flow
+from src.schema import User
 from src.settings import Settings, settings
 
 
@@ -80,13 +85,45 @@ ApplicationContainer = Annotated[Container, Depends(lambda: Container(settings))
 
 
 def get_flow():
-    from google_auth_oauthlib.flow import Flow
-
     return Flow.from_client_secrets_file(
         settings.client_secrets_file,
         scopes=settings.scopes,
         redirect_uri=settings.redirect_uri
     )
+
+GoogleCalendarFlow = Annotated[Flow, Depends(get_flow)]
+
+engine = create_async_engine(settings.database_url)
+
+async def get_session():
+    async_session = async_sessionmaker(bind=engine)
+    async with async_session() as session:
+        yield session
+
+AsyncDBSession = Annotated[AsyncSession, Depends(get_session)]
+
+
+reusable_oauth2 = OAuth2PasswordBearer(
+    tokenUrl="please login by supabase-js to get token"
+)
+AccessTokenDep = Annotated[str, Depends(reusable_oauth2)]
+
+gotrue_client = AsyncGoTrueClient(url=settings.gotrue_url)
+
+async def get_current_user(access_token: AccessTokenDep) -> User:
+    """get current user from access_token and  validate same time"""
+    if not gotrue_client:
+        raise HTTPException(status_code=500, detail="Super client not initialized")
+
+    user_rsp = await gotrue_client.get_user(jwt=access_token)
+    if not user_rsp:
+        # logging.error("User not found")
+        raise HTTPException(status_code=404, detail="User not found")
+    return User(**user_rsp.user.model_dump(), access_token=access_token)
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
 
 async def main():
     # from src.application.usecase import list_upcoming_tasks

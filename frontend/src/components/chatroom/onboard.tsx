@@ -6,16 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, Check, Loader2 } from "lucide-react"
-import { API_URL } from "@/app/_api/chat"
 import { useGoogleAuth } from "@/hooks/useGoogleAuth"
 import { useRouter } from "next/navigation"
+import { API_URL } from "@/app/_api/constants"
+import { useCanvasConnect, useGoogleConnect } from "@/app/_api/auth"
 
 export default function OnboardingSteps() {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(0)
   const [canvasApiToken, setCanvasApiToken] = useState("")
-  const [isConnectingCanvas, setIsConnectingCanvas] = useState(false)
-  const [canvasError, setCanvasError] = useState<string | null>(null)
   const { isConnected, isLoading, error, connectGoogleCalendar } = useGoogleAuth('/onboarding')
 
   const steps = [
@@ -24,36 +23,24 @@ export default function OnboardingSteps() {
     { title: "Connect Canvas API", description: "Access your course information" },
     { title: "All Set!", description: "You're ready to go" },
   ]
+  const { isLoading: canvasLoading, error: canvasError, execute: canvasConnect } = useCanvasConnect();
+
 
   const handleCanvasApiConnect = async () => {
-    setIsConnectingCanvas(true)
-    setCanvasError(null)
-
     try {
-      const response = await fetch(`${API_URL}/auth/canvas/connect`, {
+      const { success, message } = await canvasConnect({
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token: canvasApiToken }),
+        body: { token: canvasApiToken },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to connect to Canvas API');
-      }
-
-      const data = await response.json();
-      if (data.success) {
+      if (success) {
         setCurrentStep(currentStep + 1);
       } else {
-        throw new Error(data.message || 'Failed to connect to Canvas API');
+        throw new Error(message || 'Failed to connect to Canvas API');
       }
     } catch (error) {
       console.error('Error connecting to Canvas API:', error);
-      setCanvasError(error instanceof Error ? error.message : 'An unknown error occurred');
-    } finally {
-      setIsConnectingCanvas(false);
-    }
+    } 
   }
 
   const renderStepContent = () => {
@@ -107,9 +94,9 @@ export default function OnboardingSteps() {
               </div>
               <Button 
                 onClick={handleCanvasApiConnect} 
-                disabled={!canvasApiToken || isConnectingCanvas}
+                disabled={!canvasApiToken || canvasLoading}
               >
-                {isConnectingCanvas ? (
+                {canvasLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Connecting...
@@ -118,7 +105,7 @@ export default function OnboardingSteps() {
                   'Connect Canvas API'
                 )}
               </Button>
-              {canvasError && <p className="text-red-500 mt-2">{canvasError}</p>}
+              {canvasError && <p className="text-red-500 mt-2">{canvasError.message}</p>}
             </div>
           </div>
         )

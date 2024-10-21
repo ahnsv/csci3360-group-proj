@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { API_URL } from "@/app/_api/chat"
+import { API_URL } from "@/app/_api/constants"
 
 export function useGoogleAuth(redirectPath: string) {
   const [isConnected, setIsConnected] = useState(false)

@@ -8,7 +8,7 @@ import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
 import {Calendar} from "@/components/ui/calendar"
 import {Card, CardContent} from "@/components/ui/card"
-import {Send} from "lucide-react"
+import {Send, Loader2} from "lucide-react"
 import { chatWithScheduler } from '@/app/_api/chat';
 
 export default function ChatScheduler() {
@@ -17,6 +17,7 @@ export default function ChatScheduler() {
         {author: 'agent', message: 'Hello! How can I assist you today?', sent_at: new Date()}
     ])
     const [inputMessage, setInputMessage] = React.useState('')
+    const [isLoading, setIsLoading] = React.useState(false)
 
     // Mock schedule data
     const schedules = [
@@ -36,6 +37,9 @@ export default function ChatScheduler() {
         // Clear input
         setInputMessage('')
 
+        // Set loading to true
+        setIsLoading(true)
+
         try {
             // Send message to server and get response
             const aiResponse = await chatWithScheduler(inputMessage)
@@ -44,6 +48,9 @@ export default function ChatScheduler() {
             console.error('Error sending message:', error)
             // Optionally, add an error message to the chat
             setChatMessages(prev => [...prev, {author: 'AI', message: 'Sorry, there was an error processing your request.', sent_at: new Date()}])
+        } finally {
+            // Set loading to false when done
+            setIsLoading(false)
         }
     }
 
@@ -73,6 +80,18 @@ export default function ChatScheduler() {
                             )}
                         </div>
                     ))}
+                    {isLoading && (
+                        <div className="flex items-start mb-4">
+                            <Avatar className="mr-2">
+                                <AvatarImage src="/placeholder.svg?height=40&width=40" alt="AI"/>
+                                <AvatarFallback>AI</AvatarFallback>
+                            </Avatar>
+                            <div className="rounded-lg p-2 bg-gray-200 flex items-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-gray-500 mr-2" />
+                                <span>Thinking...</span>
+                            </div>
+                        </div>
+                    )}
                 </ScrollArea>
                 <div className="p-4 border-t border-gray-200">
                     <form className="flex items-center" onSubmit={handleSubmit}>
@@ -82,8 +101,9 @@ export default function ChatScheduler() {
                             className="flex-grow mr-2"
                             value={inputMessage}
                             onChange={(e) => setInputMessage(e.target.value)}
+                            disabled={isLoading}
                         />
-                        <Button type="submit" size="icon">
+                        <Button type="submit" size="icon" disabled={isLoading}>
                             <Send className="h-4 w-4"/>
                         </Button>
                     </form>

@@ -63,7 +63,7 @@ async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> dict[
 
 async def get_schedules(calendar_client: GoogleCalendarClient, time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
     """
-    Get schedules from google calendar
+    Get schedules from Google Calendar.
 
     :param time_min: datetime = None
     :param time_max: datetime = None

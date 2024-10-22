@@ -48,16 +48,6 @@ class GoogleCalendarClient:
         return credentials
 
     async def get_calendar_events(self, calendar_id: str = "primary", time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
-        """
-        Get calendar events from google calendar
-
-        Args:
-            calendar_id: str = "primary"
-            time_min: datetime = None
-            time_max: datetime = None
-        Returns:
-            list[dict[str, Any]]: list of calendar events
-        """
         if self.client is None:
             raise ExternalApiError(401, "Unauthorized")
         event_list = self.client.events().list(calendarId=calendar_id, timeMin=time_min, timeMax=time_max).execute()

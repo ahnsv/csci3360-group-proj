@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -61,8 +61,15 @@ async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> dict[
     return tasks.model_dump(mode="json")
 
 
-def get_class_schedule(calendar_client: GoogleCalendarClient) -> list[ClassSchedule]:
-    ...
+async def get_class_schedule(calendar_client: GoogleCalendarClient, time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
+    print("get_class_schedule called")
+    if time_min is None:
+        time_min = datetime.now()
+    if time_max is None:
+        time_max = time_min + timedelta(days=7)
+    calendar_events = await calendar_client.get_calendar_events(time_min=time_min, time_max=time_max)
+    slots = [TimeSlot(name=event["summary"], start=event["start"], end=event["end"]) for event in calendar_events]
+    return slots
 
 
 def suggest_timeslots(availability: list[ClassSchedule], task: Assignment) -> list[ClassSchedule]:

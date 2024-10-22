@@ -10,19 +10,16 @@ from src.deps import ApplicationContainer, AsyncDBSession, CurrentUser, GoogleCa
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.get("/google/authorize")
-async def authorize(flow: GoogleCalendarFlow, current_user: CurrentUser, redirect_uri: str = Query(...)):
+async def authorize(container: ApplicationContainer, _: CurrentUser, redirect_uri: str = Query(...)):
+    calendar_client = container.google_calendar_client
+    flow = calendar_client.flow
     authorization_url, _ = flow.authorization_url(prompt="consent")
     return RedirectResponse(url=f"{authorization_url}&redirect_uri={redirect_uri}")
 
 @router.get("/google/oauth2callback")
-async def oauth2callback(request: Request, code: str, current_user: CurrentUser, session: AsyncDBSession, flow: GoogleCalendarFlow, redirect_uri: str = Query(...)):
-    flow.fetch_token(code=code)
-    credentials = flow.credentials
-
-    try:
-        build('calendar', 'v3', credentials=credentials)
-    except Exception as e:
-        return RedirectResponse(url=f"{request.url.path}?error=true")
+async def oauth2callback(request: Request, container: ApplicationContainer, code: str, current_user: CurrentUser, session: AsyncDBSession, redirect_uri: str = Query(None)):
+    calendar_client = container.google_calendar_client
+    credentials = calendar_client.authenticate(code)
     
     integration = Integration(
         type="google",
@@ -37,7 +34,7 @@ async def oauth2callback(request: Request, code: str, current_user: CurrentUser,
 
 # Add a new endpoint to check the connection status
 @router.get("/google/status")
-async def google_status():
+async def google_status(current_user: CurrentUser):
     # In a real application, you would check if the user has valid Google credentials
     # For this example, we'll just return a mock status
     return {"connected": False}
@@ -50,7 +47,7 @@ class CanvasConnectOut(BaseModel):
     message: str
 
 @router.post("/canvas/connect", response_model=CanvasConnectOut)
-async def canvas_connect(request: CanvasConnectIn, container: ApplicationContainer):
+async def canvas_connect(request: CanvasConnectIn, container: ApplicationContainer, current_user: CurrentUser):
     canvas_client = container.canvas_client
     canvas_client.update_api_token(request.token)
 

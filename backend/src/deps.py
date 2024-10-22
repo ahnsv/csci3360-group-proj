@@ -9,6 +9,7 @@ import httpx
 from fastapi import Depends, HTTPException
 from supabase_auth import AsyncGoTrueClient
 from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build, Resource
 from src.schema import User
 from src.settings import Settings, settings
 
@@ -32,10 +33,27 @@ class CanvasApiError(ExternalApiError):
 class GoogleCalendarClient:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.client = httpx.AsyncClient()
+        self.flow = get_flow()
+        self.client: Resource | None = None
 
-    async def update_api_token(self, token: str):
-        self.client.headers["Authorization"] = f"Bearer {token}"
+    def authenticate(self, code: str):
+        self.flow.fetch_token(code=code)
+        credentials = self.flow.credentials
+
+        service = build('calendar', 'v3', credentials=credentials)
+        if service is None:
+            raise ExternalApiError(401, "Unauthorized")
+        self.client = service
+        
+        return credentials
+
+    async def get_calendar_events(self, calendar_id: str = "primary", time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
+        if self.client is None:
+            raise ExternalApiError(401, "Unauthorized")
+        event_list = self.client.events().list(calendarId=calendar_id, timeMin=time_min, timeMax=time_max).execute()
+        if event_list is None:
+            raise ExternalApiError(401, "Unauthorized")
+        return event_list.get("items", [])
 
 # client to interact with canvas api
 class CanvasClient:

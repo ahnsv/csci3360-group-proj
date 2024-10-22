@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
 from src.application.openai_utils import function_to_schema
-from src.application.usecase import get_class_schedule, list_upcoming_tasks
+from src.application.usecase import get_schedules, list_upcoming_tasks
 from src.deps import Container
 from src.settings import settings
 
@@ -30,7 +30,7 @@ class ScheduleAgentChatOutput(BaseModel):
 async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
     functions_to_call = {
         "list_upcoming_tasks": partial(list_upcoming_tasks, canvas_client=container.canvas_client),
-        "get_class_schedule": partial(get_class_schedule, calendar_client=container.google_calendar_client),
+        "get_schedules": partial(get_schedules, calendar_client=container.google_calendar_client),
     }
     # TODO: add chat history from database
     inmemory_chat_history.append({"role": "user", "content": message})

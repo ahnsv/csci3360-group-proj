@@ -61,18 +61,24 @@ async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> dict[
     return tasks.model_dump(mode="json")
 
 
-async def get_class_schedule(calendar_client: GoogleCalendarClient, time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
-    print("get_class_schedule called")
+async def get_schedules(calendar_client: GoogleCalendarClient, time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
+    """
+    Get schedules from google calendar
+
+    :param time_min: datetime = None
+    :param time_max: datetime = None
+    :return: list[dict[str, Any]]
+    """
+
     if time_min is None:
         time_min = datetime.now()
     if time_max is None:
         time_max = time_min + timedelta(days=7)
     calendar_events = await calendar_client.get_calendar_events(time_min=time_min, time_max=time_max)
-    slots = [TimeSlot(name=event["summary"], start=event["start"], end=event["end"]) for event in calendar_events]
-    return slots
+    return [TimeSlot(name=event["summary"], start=event["start"], end=event["end"]).model_dump(mode="json") for event in calendar_events]
 
 
-def suggest_timeslots(availability: list[ClassSchedule], task: Assignment) -> list[ClassSchedule]:
+def suggest_timeslots(availability: list[TimeSlot], task: Assignment) -> list[TimeSlot]:
     ...
 
 

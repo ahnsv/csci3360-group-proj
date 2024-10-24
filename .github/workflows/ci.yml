@@ -7,16 +7,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      
       -
         name: Load client secret
         run: |
-          echo ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }} > client_secrets.json
+          echo ${{ secrets.GOOGLE_CLIENT_SECRETS_JSON }} > backend/client_secrets.json
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -35,3 +31,4 @@ jobs:
         with:
           push: true
           tags: ahnsv/csci3360:latest
+          context: backend

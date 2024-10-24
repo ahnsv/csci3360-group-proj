@@ -6,7 +6,7 @@ type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 interface ApiCallOptions {
   method?: HttpMethod;
   headers?: Record<string, string>;
-  body?: any;
+  body?: Record<string, unknown>;
 }
 
 interface ApiResponse<T> {

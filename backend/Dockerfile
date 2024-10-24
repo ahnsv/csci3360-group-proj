@@ -4,6 +4,7 @@ WORKDIR /app
 
 ENV PORT=10000
 
+RUN pip install poetry
 COPY poetry.lock .
 COPY pyproject.toml .
 RUN poetry install

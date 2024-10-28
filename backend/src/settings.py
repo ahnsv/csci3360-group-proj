@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     
     # gotrue
     gotrue_url: str
+    gotrue_anon_key: str
 
     # database
     database_url: str

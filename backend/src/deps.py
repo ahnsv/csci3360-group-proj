@@ -7,10 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 
 import httpx
 from fastapi import Depends, HTTPException
-from supabase_auth import AsyncGoTrueClient
+from supabase_auth import AsyncGoTrueClient, User
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build, Resource
-from src.schema import User
 from src.settings import Settings, settings
 
 
@@ -18,13 +17,13 @@ class ExternalApiError(Exception):
     def __init__(self, status_code: int, message: str):
         self.status_code = status_code
         self.message = message
-    
+
     def __str__(self):
         return f"{self.status_code} {self.message}"
-    
+
     def __repr__(self):
         return f"{self.__class__.__name__}(status_code={self.status_code}, message={self.message})"
-    
+
 
 class CanvasApiError(ExternalApiError):
     ...
@@ -44,10 +43,11 @@ class GoogleCalendarClient:
         if service is None:
             raise ExternalApiError(401, "Unauthorized")
         self.client = service
-        
+
         return credentials
 
-    async def get_calendar_events(self, calendar_id: str = "primary", time_min: datetime = None, time_max: datetime = None) -> list[dict[str, Any]]:
+    async def get_calendar_events(self, calendar_id: str = "primary", time_min: datetime = None,
+                                  time_max: datetime = None) -> list[dict[str, Any]]:
         if self.client is None:
             raise ExternalApiError(401, "Unauthorized")
         event_list = self.client.events().list(calendarId=calendar_id, timeMin=time_min, timeMax=time_max).execute()
@@ -55,11 +55,13 @@ class GoogleCalendarClient:
             raise ExternalApiError(401, "Unauthorized")
         return event_list.get("items", [])
 
+
 # client to interact with canvas api
 class CanvasClient:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.client = httpx.AsyncClient(base_url=settings.canvas_api_url, headers={"Authorization": f"Bearer {settings.canvas_api_token}"})
+        self.client = httpx.AsyncClient(base_url=settings.canvas_api_url,
+                                        headers={"Authorization": f"Bearer {settings.canvas_api_token}"})
 
     async def update_api_token(self, token: str):
         self.client.headers["Authorization"] = f"Bearer {token}"
@@ -70,12 +72,14 @@ class CanvasClient:
         response = await self.client.get("/api/v1/courses?enrollment_type[]=student&enrollment_state[]=active")
         return response.json()
 
-
-    async def get_upcoming_tasks(self, n_days: int = 7, start_date: datetime = None, end_date: datetime = None) -> list[dict[str, Any]]:
+    async def get_upcoming_tasks(self, n_days: int = 7, start_date: datetime = None, end_date: datetime = None) -> list[
+        dict[str, Any]]:
         if start_date is None:
             start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=timezone.utc)
         if end_date is None:
-            end_date = (datetime.now() + timedelta(days=n_days)).replace(hour=23, minute=59, second=59, microsecond=999999).replace(tzinfo=timezone.utc)
+            end_date = (datetime.now() + timedelta(days=n_days)).replace(hour=23, minute=59, second=59,
+                                                                         microsecond=999999).replace(
+                tzinfo=timezone.utc)
 
         try:
             start_date_str = start_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
@@ -87,9 +91,11 @@ class CanvasClient:
             raise CanvasApiError(response.status_code, response.text)
         return response.json()
 
+
 # client to interact with openai api
 class OpenAIClient:
     ...
+
 
 # dependency injection container
 class Container:
@@ -109,35 +115,41 @@ def get_flow():
         redirect_uri=settings.redirect_uri
     )
 
+
 GoogleCalendarFlow = Annotated[Flow, Depends(get_flow)]
 
 engine = create_async_engine(settings.database_url)
+
 
 async def get_session():
     async_session = async_sessionmaker(bind=engine)
     async with async_session() as session:
         yield session
 
-AsyncDBSession = Annotated[AsyncSession, Depends(get_session)]
 
+AsyncDBSession = Annotated[AsyncSession, Depends(get_session)]
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl="please login by supabase-js to get token"
 )
 AccessTokenDep = Annotated[str, Depends(reusable_oauth2)]
 
-gotrue_client = AsyncGoTrueClient(url=settings.gotrue_url)
+gotrue_client = AsyncGoTrueClient(url=settings.gotrue_url, headers={"Authorization": f"Bearer {settings.gotrue_anon_key}", "apikey": settings.gotrue_anon_key})
+
 
 async def get_current_user(access_token: AccessTokenDep) -> User:
-    """get current user from access_token and  validate same time"""
+    """get current user from access_token and validate same time"""
     if not gotrue_client:
         raise HTTPException(status_code=500, detail="Super client not initialized")
+
+    if not access_token:
+        raise HTTPException(status_code=401, detail="Access token not found")
 
     user_rsp = await gotrue_client.get_user(jwt=access_token)
     if not user_rsp:
         # logging.error("User not found")
         raise HTTPException(status_code=404, detail="User not found")
-    return User(**user_rsp.user.model_dump(), access_token=access_token)
+    return user_rsp.user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
@@ -151,6 +163,8 @@ async def main():
     # print(assignments)
     ...
 
+
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

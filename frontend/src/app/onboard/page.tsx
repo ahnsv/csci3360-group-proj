@@ -4,12 +4,12 @@ import {createServerSupabaseClient} from "@/lib/supabase/server";
 
 export default async function OnBoardingPage() {
     const supabase = createServerSupabaseClient()
-    const {data: {user}} = await supabase.auth.getUser()
-    if (!user) {
+    const {data: {session}} = await supabase.auth.getSession()
+    if (!session?.user) {
         redirect('/signin')
     }
 
     return (
-        <OnboardingSteps/>
+        <OnboardingSteps accessToken={session.access_token}/>
     )
 }

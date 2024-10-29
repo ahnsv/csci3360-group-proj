@@ -55,7 +55,7 @@ export default function ChatScheduler() {
     }
 
     return (
-        <div className="flex h-screen bg-gray-100 text-sm tracking-tight">
+        <div className="flex h-full bg-gray-100 text-sm tracking-tight">
             {/* Chat Interface */}
             <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
                 <ScrollArea className="flex-grow p-4">

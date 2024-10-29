@@ -16,11 +16,13 @@ import { ChevronUp, Link2, MessageCircleDashed, MessageSquare, User2 } from "luc
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./dropdown-menu";
 import React from "react";
 import { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
 
 export function AppSidebar() {
     const supabase = createSupabaseClient();
     const [user, setUser] = React.useState<User | null>(null);
+    const router = useRouter();
 
     React.useEffect(() => {
         const fetchUser = async () => {
@@ -32,6 +34,11 @@ export function AppSidebar() {
         };
         fetchUser();
     }, []);
+
+    const handleSignoutButtonClick = () => {
+        supabase.auth.signOut();
+        router.push("/signin");
+    }
 
     return (
         <Sidebar>
@@ -75,7 +82,7 @@ export function AppSidebar() {
                         <DropdownMenuItem>
                             <span>Account</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSignoutButtonClick}>
                             <span>Sign out</span>
                         </DropdownMenuItem>
                     </DropdownMenuContent>

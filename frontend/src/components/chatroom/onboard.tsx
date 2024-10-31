@@ -6,20 +6,23 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useGoogleAuth } from "@/hooks/useGoogleAuth"
-import { Calendar, Check, Loader2 } from "lucide-react"
+import { Calendar, Check, Loader2, Sun, Moon, Clock, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { cn } from '@/lib/utils'
 
 export default function OnboardingSteps({accessToken}: { accessToken: string }) {
     const router = useRouter()
     const [currentStep, setCurrentStep] = useState(0)
     const [canvasApiToken, setCanvasApiToken] = useState("")
     const {isConnected, isLoading, error, connectGoogleCalendar} = useGoogleAuth('/onboard', accessToken)
+    const [chronotype, setChronotype] = useState<'morning' | 'night'>('morning')
 
     const steps = [
         {title: "Welcome", description: "Start your onboarding process"},
         {title: "Connect Google Calendar", description: "Sync your schedule"},
         {title: "Connect Canvas API", description: "Access your course information"},
+        {title: "Study Preference", description: "Set your study time"},
         {title: "All Set!", description: "You're ready to go"},
     ]
     const {isLoading: canvasLoading, error: canvasError, execute: canvasConnect} = useCanvasConnect();
@@ -115,6 +118,46 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                     </div>
                 )
             case 3:
+                return (
+                    <div className="text-center">
+                        <h2 className="text-2xl font-bold mb-2">When are you most productive?</h2>
+                        <p className="text-gray-600 mb-6">This helps us tailor your experience.</p>
+                        <div className="flex justify-between items-center bg-gray-100 rounded-lg p-2 mb-4">
+                            <button
+                                onClick={() => setChronotype('morning')}
+                                className={cn(
+                                    "flex-1 flex flex-col items-center space-y-2 p-4 rounded-lg transition-all duration-200",
+                                    chronotype === 'morning' ? "bg-yellow-100 shadow-md" : "hover:bg-gray-200"
+                                )}
+                            >
+                                <Sun className="w-10 h-10 text-yellow-500" />
+                                <span className="font-medium">Early Bird</span>
+                            </button>
+                            <button
+                                onClick={() => setChronotype('night')}
+                                className={cn(
+                                    "flex-1 flex flex-col items-center space-y-2 p-4 rounded-lg transition-all duration-200",
+                                    chronotype === 'night' ? "bg-indigo-100 shadow-md" : "hover:bg-gray-200"
+                                )}
+                            >
+                                <Moon className="w-10 h-10 text-indigo-500" />
+                                <span className="font-medium">Night Owl</span>
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-center text-gray-600 mb-4">
+                            <Clock className="w-4 h-4 mr-2" />
+                            <span className="text-sm">
+                                {chronotype === 'morning' 
+                                    ? "We'll prioritize morning slots for you" 
+                                    : "We'll keep evening slots open for you"}
+                            </span>
+                        </div>
+                        <Button onClick={() => setCurrentStep(currentStep + 1)} className="mt-4">
+                            Continue
+                        </Button>
+                    </div>
+                )
+            case 4:
                 return (
                     <div className="text-center">
                         <h2 className="text-2xl font-bold mb-4">All Set!</h2>

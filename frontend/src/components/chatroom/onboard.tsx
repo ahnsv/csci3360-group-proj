@@ -83,6 +83,9 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                     <div className="text-center">
                         <h2 className="text-2xl font-bold mb-4">Connect Canvas API</h2>
                         <p className="mb-4">Enter your Canvas API token to access your course information.</p>
+                        <div className="mb-4 p-4 border-l-4 border-red-500 bg-red-100 text-red-700">
+                            <strong>Note:</strong> You can find your Canvas API token in your Canvas account settings under "Account" &gt; "Settings" &gt; "Approved Integrations" &gt; "New Access Token"
+                        </div>
                         <div className="flex flex-col items-center space-y-4">
                             <div className="w-full max-w-sm">
                                 <Label htmlFor="api-token">Canvas API Token</Label>

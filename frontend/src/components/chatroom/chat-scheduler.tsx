@@ -10,8 +10,9 @@ import {Calendar} from "@/components/ui/calendar"
 import {Card, CardContent} from "@/components/ui/card"
 import {Send, Loader2} from "lucide-react"
 import { chatWithScheduler } from '@/app/_api/chat';
+import ReactMarkdown from 'react-markdown'
 
-export default function ChatScheduler() {
+export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const [chatMessages, setChatMessages] = React.useState([
         {author: 'agent', message: 'Hello! How can I assist you today?', sent_at: new Date()}
@@ -42,7 +43,7 @@ export default function ChatScheduler() {
 
         try {
             // Send message to server and get response
-            const aiResponse = await chatWithScheduler(inputMessage)
+            const aiResponse = await chatWithScheduler(inputMessage, accessToken)
             setChatMessages(prev => [...prev, aiResponse])
         } catch (error) {
             console.error('Error sending message:', error)
@@ -70,7 +71,9 @@ export default function ChatScheduler() {
                             )}
                             <div
                                 className={`rounded-lg p-2 max-w-[70%] ${msg.author === 'User' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-                                {msg.message}
+                                <ReactMarkdown className="prose dark:prose-invert max-w-none">
+                                    {msg.message}
+                                </ReactMarkdown>
                             </div>
                             {msg.author === 'User' && (
                                 <Avatar className="ml-2">

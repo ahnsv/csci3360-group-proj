@@ -1,9 +1,10 @@
 import { API_URL } from "./constants";
-export async function chatWithScheduler(message: string) {
+export async function chatWithScheduler(message: string, accessToken: string) {
     const response = await fetch(`${API_URL}/chat/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify({
             author: 'user',

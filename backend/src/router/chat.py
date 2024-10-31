@@ -1,4 +1,5 @@
 from datetime import datetime
+import openai
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -24,6 +25,6 @@ async def chat(request: ChatRequest, aclient: OpenAIAClient, container: Applicat
         output = await chat_with_schedule_agent(aclient, request.message, container)
     except CanvasApiError as e:
         raise HTTPException(status_code=500, detail={"scope": "canvas", "message": e.message})
-    # except OpenAIAPIError as e:
-    #     raise HTTPException(status_code=500, detail={"scope": "openai", "message": e.message})
+    except openai.APIConnectionError as e:
+        raise HTTPException(status_code=503, detail={"scope": "openai", "message": "Failed to connect to OpenAI service"})
     return {"message": output.message or "No response", "author": 'agent', "sent_at": datetime.now()}

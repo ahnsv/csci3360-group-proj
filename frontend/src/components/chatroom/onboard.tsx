@@ -30,6 +30,9 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
             const {success, message} = await canvasConnect({
                 method: 'POST',
                 body: {token: canvasApiToken},
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
             });
 
             if (success) {

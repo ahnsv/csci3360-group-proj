@@ -43,7 +43,11 @@ export function useGoogleAuth(redirectPath: string, supabaseAccessToken: string)
     const connectGoogleCalendar = () => {
         const currentUrl = new URL(window.location.href)
         const redirectUri = `${currentUrl.origin}${redirectPath}`
-        window.location.href = `${API_URL}/auth/google/authorize?redirect_uri=${encodeURIComponent(redirectUri)}`
+        const state = btoa(JSON.stringify({
+            access_token: supabaseAccessToken,
+            redirect_uri: redirectUri
+        }))
+        window.location.href = `${API_URL}/auth/google/authorize?state=${encodeURIComponent(state)}`
     }
 
     return {isConnected, isLoading, error, connectGoogleCalendar}

@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
-from openai import APIError as OpenAIAPIError
 from pydantic import BaseModel
 
 from src.application.openai import OpenAIAClient, chat_with_schedule_agent

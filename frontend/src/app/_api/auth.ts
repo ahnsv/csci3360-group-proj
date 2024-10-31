@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { API_URL } from "./constants";
+import { error } from 'console';
 
 type HttpMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
@@ -67,8 +68,6 @@ const useApiCall = <T>(endpoint: string): ApiResponse<T> => {
 
 export const useCanvasConnect = () => useApiCall<{ success: boolean, message: string }>('/auth/canvas/connect');
 export const useGoogleConnect = () => useApiCall<{ connected: boolean }>('/auth/google/connect');
+export const useRequiredIntegrations = () => useApiCall<{ google: boolean, canvas: boolean }>('/auth/required-integrations');
 
-// Example of how to add more API calls:
-// export const useFetchUserProfile = () => useApiCall<UserProfile>('/user/profile');
-// export const useUpdateUserProfile = () => useApiCall<UserProfile>('/user/profile');
-// export const useDeleteUser = () => useApiCall<void>('/user');
+

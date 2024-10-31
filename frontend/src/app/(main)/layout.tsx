@@ -7,7 +7,7 @@ export default function MainLayout({children}: Readonly<{
     return (
         <SidebarProvider>
           <AppSidebar />
-          <main className="w-full h-screen">
+          <main className="w-full h-full">
             <SidebarTrigger  className="my-1 mx-2"/>
             {children}
           </main>

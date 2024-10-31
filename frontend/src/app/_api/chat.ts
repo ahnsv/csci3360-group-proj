@@ -24,3 +24,21 @@ export async function chatWithScheduler(message: string) {
         sent_at: new Date(data.sent_at),
     };
 }
+
+export const checkRequiredIntegrations = async () => {
+    const response = await fetch(`${API_URL}/auth/required-integrations/`);
+
+    if (!response.ok) {
+        const errorData = await response.json();
+
+        return {
+            data: null,
+            error: errorData,
+        }
+    }
+
+    return {
+      data: await response.json(),
+      error: null,
+    };
+}

@@ -2,14 +2,14 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any
 
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-
 import httpx
 from fastapi import Depends, HTTPException
-from supabase_auth import AsyncGoTrueClient, User
+from fastapi.security import OAuth2PasswordBearer
 from google_auth_oauthlib.flow import Flow
-from googleapiclient.discovery import build, Resource
+from googleapiclient.discovery import Resource, build
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from supabase_auth import AsyncGoTrueClient, User
+
 from src.settings import Settings, settings
 
 

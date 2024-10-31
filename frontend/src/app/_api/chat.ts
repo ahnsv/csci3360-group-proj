@@ -28,13 +28,13 @@ export async function chatWithScheduler(message: string) {
 export const checkRequiredIntegrations = async (accessToken: string) => {
     const response = await fetch(`${API_URL}/auth/required-integrations/`, {
         headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Cache-Control': 'no-cache' // Ensure the request is not cached
+            'Authorization': `Bearer ${accessToken}`
         }
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
+        const errorText = await response.text();
+        const errorData = { message: errorText };
 
         return {
             data: null,
@@ -45,5 +45,6 @@ export const checkRequiredIntegrations = async (accessToken: string) => {
     return {
       data: await response.json(),
       error: null,
-    };
+    }
+
 }

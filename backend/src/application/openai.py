@@ -30,6 +30,11 @@ class ScheduleAgentChatOutput(BaseModel):
     actions: list[dict] | None = Field(default_factory=list)
 
 async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
+    print(client)
+    print(client.api_key)
+    print(client.auth_headers)
+    print(settings.openai_api_key)
+
     functions_to_call = {
         "list_upcoming_tasks": partial(list_upcoming_tasks, canvas_client=container.canvas_client),
         "get_schedules": partial(get_schedules, calendar_client=container.google_calendar_client),

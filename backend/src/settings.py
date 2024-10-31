@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     database_url: str
 
     # openai
-    openai_api_key: str = Field(default="", env="OPENAI_API_KEY")
+    openai_api_key: str
 
     # google calendar
     client_secrets_file: str = Field(default="client_secrets.json", alias="GCAL_CLIENT_SECRETS_FILE")

@@ -38,8 +38,8 @@ export default function Component() {
                     <h1 className="text-4xl font-bold text-white text-center px-8">
                         {mounted && (
                             <span className="inline-block animate-fade-in-up tracking-tighter">
-                Connect and make<br/> your day like a pro
-              </span>
+                                Connect and make<br/> your day like a pro
+                            </span>
                         )}
                     </h1>
                 </div>

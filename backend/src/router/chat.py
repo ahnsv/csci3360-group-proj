@@ -26,5 +26,5 @@ async def chat(request: ChatRequest, aclient: OpenAIAClient, container: Applicat
     except CanvasApiError as e:
         raise HTTPException(status_code=500, detail={"scope": "canvas", "message": e.message})
     except openai.APIConnectionError as e:
-        raise HTTPException(status_code=503, detail={"scope": "openai", "message": "Failed to connect to OpenAI service"})
+        raise HTTPException(status_code=503, detail={"scope": "openai", "message": "Failed to connect to OpenAI service", "error": e})
     return {"message": output.message or "No response", "author": 'agent', "sent_at": datetime.now()}

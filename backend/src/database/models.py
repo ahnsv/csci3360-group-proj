@@ -34,3 +34,19 @@ class Integration(Base):
 
     def __repr__(self):
         return f"<Integration(id={self.id}, type='{self.type}', user_id='{self.user_id}', created_at='{self.created_at}')>"
+
+class Chat(Base):
+    __tablename__ = 'chat'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    user_id = Column(UUID(as_uuid=True), ForeignKey('profiles.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    author = Column(String, nullable=True)
+    updated_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), onupdate=func.now())
+    content = Column(String, nullable=True)
+    extra = Column(Text, nullable=True)  # Using Text for JSONB representation
+
+    profile = relationship("Profiles")
+
+    def __repr__(self):
+        return f"<Chat(id={self.id}, user_id='{self.user_id}', author='{self.author}', created_at='{self.created_at}')>"

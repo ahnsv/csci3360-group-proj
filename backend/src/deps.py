@@ -92,9 +92,6 @@ class CanvasClient:
         return response.json()
 
 
-# client to interact with openai api
-class OpenAIClient:
-    ...
 
 
 # dependency injection container
@@ -102,7 +99,7 @@ class Container:
     def __init__(self, settings: Settings):
         self.google_calendar_client = GoogleCalendarClient(settings)
         self.canvas_client = CanvasClient(settings=settings)
-        self.openai_client = OpenAIClient()
+        # self.openai_client = OpenAIClient()
 
 
 ApplicationContainer = Annotated[Container, Depends(lambda: Container(settings))]

@@ -3,7 +3,7 @@ from functools import partial
 from typing import Annotated
 
 from fastapi import Depends
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
 from src.application.openai_utils import function_to_schema
@@ -14,6 +14,9 @@ from src.settings import settings
 
 async def aclient():
     return AsyncOpenAI(api_key=settings.openai_api_key)
+
+def client():
+    return OpenAI(api_key=settings.openai_api_key)
 
 inmemory_chat_history = [
     {
@@ -26,14 +29,14 @@ class ScheduleAgentChatOutput(BaseModel):
     message: str
     actions: list[dict] | None = Field(default_factory=list)
 
-async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
+async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
     functions_to_call = {
         "list_upcoming_tasks": partial(list_upcoming_tasks, canvas_client=container.canvas_client),
         "get_schedules": partial(get_schedules, calendar_client=container.google_calendar_client),
     }
     # TODO: add chat history from database
     inmemory_chat_history.append({"role": "user", "content": message})
-    response = await aclient.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4o",
         messages=inmemory_chat_history,
         tools=list([function_to_schema(f) for f in functions_to_call.values()]),
@@ -65,7 +68,7 @@ async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container
         "tool_call_id": function_call.id,
     })
 
-    second_response = await aclient.beta.chat.completions.parse(
+    second_response = client.beta.chat.completions.parse(
         model="gpt-4o",
         messages=inmemory_chat_history,
         temperature=0.0,
@@ -83,3 +86,4 @@ async def chat_with_schedule_agent(aclient: AsyncOpenAI, message: str, container
 
 
 OpenAIAClient = Annotated[AsyncOpenAI, Depends(aclient)]
+OpenAIClient = Annotated[OpenAI, Depends(client)]

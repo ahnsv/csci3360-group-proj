@@ -5,10 +5,10 @@ export default function MainLayout({children}: Readonly<{
   children: React.ReactNode;
 }>)  {
     return (
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={false}>
           <AppSidebar />
           <main className="w-full h-full">
-            <SidebarTrigger  className="my-1 mx-2"/>
+            <SidebarTrigger  className="my-1 mx-2 p-1"/>
             {children}
           </main>
         </SidebarProvider>

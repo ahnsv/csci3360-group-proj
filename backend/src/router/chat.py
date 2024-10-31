@@ -4,8 +4,8 @@ import openai
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from src.application.openai import OpenAIAClient, chat_with_schedule_agent
-from src.deps import ApplicationContainer, CanvasApiError
+from src.application.openai import OpenAIClient, chat_with_schedule_agent
+from src.deps import ApplicationContainer, CanvasApiError, CurrentUser
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -20,9 +20,9 @@ class ChatResponse(BaseModel):
     sent_at: datetime
 
 @router.post("/", response_model=ChatResponse)
-async def chat(request: ChatRequest, aclient: OpenAIAClient, container: ApplicationContainer):
+async def chat(request: ChatRequest, client: OpenAIClient, container: ApplicationContainer, current_user: CurrentUser):
     try:
-        output = await chat_with_schedule_agent(aclient, request.message, container)
+        output = await chat_with_schedule_agent(client, request.message, container)
     except CanvasApiError as e:
         raise HTTPException(status_code=500, detail={"scope": "canvas", "message": e.message})
     return {"message": output.message or "No response", "author": 'agent', "sent_at": datetime.now()}

@@ -81,6 +81,12 @@ class CanvasClient:
                                                                          microsecond=999999).replace(
                 tzinfo=timezone.utc)
 
+        # if either one of them is not None, we need to fill the other one
+        if start_date is not None and end_date is None:
+            end_date = start_date + timedelta(days=n_days)
+        elif start_date is None and end_date is not None:
+            start_date = end_date - timedelta(days=n_days)
+
         try:
             start_date_str = start_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
             end_date_str = end_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")

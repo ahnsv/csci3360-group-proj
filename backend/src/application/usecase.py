@@ -35,15 +35,22 @@ class ClassSchedule(TimeSlot):
     name: str
     course: Course
 
-async def list_upcoming_tasks(n_days: int, canvas_client: CanvasClient) -> dict[str, list[dict]]:
+async def list_upcoming_tasks(canvas_client: CanvasClient, n_days: int, start_date: str = None, end_date: str = None, ) -> dict[str, list[dict]]:
     """
     List upcoming tasks from Canvas API.
 
     :param n_days: Number of days to look ahead for upcoming tasks.
+    :param start_date: Start date for upcoming tasks. (e.g., "2024-11-01")
+    :param end_date: End date for upcoming tasks. (e.g., "2024-11-07")
     :param canvas_client: Canvas client.
     :return: AcademicTasks.
     """
-    tasks_raw = await canvas_client.get_upcoming_tasks(n_days)
+    if start_date is not None:
+        start_date = datetime.strptime(start_date, "%Y-%m-%d")
+    if end_date is not None:
+        end_date = datetime.strptime(end_date, "%Y-%m-%d")
+
+    tasks_raw = await canvas_client.get_upcoming_tasks(n_days, start_date, end_date)
     assignments = []
     quizzes = []
 

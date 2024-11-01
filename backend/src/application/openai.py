@@ -30,9 +30,6 @@ class ScheduleAgentChatOutput(BaseModel):
     actions: list[dict] | None = Field(default_factory=list)
 
 async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
-    print(settings.openai_api_key)
-    print(settings.__dict__)
-
     functions_to_call = {
         "list_upcoming_tasks": partial(list_upcoming_tasks, canvas_client=container.canvas_client),
         "get_schedules": partial(get_schedules, calendar_client=container.google_calendar_client),
@@ -72,7 +69,7 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
     })
 
     second_response = client.beta.chat.completions.parse(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=inmemory_chat_history,
         temperature=0.0,
         response_format=ScheduleAgentChatOutput,

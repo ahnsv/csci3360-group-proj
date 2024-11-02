@@ -1,9 +1,11 @@
+import json
 import uuid
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Literal, Optional
 
 from google.oauth2.credentials import Credentials
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +18,9 @@ class TokenNotFoundError(Exception):
     """Exception raised when an integration token is not found."""
     pass
 
-@lru_cache(maxsize=100)
+# Dictionary to store cached tokens
+_token_cache = {}
+
 def get_cached_token(user_id: str, integration_name: str) -> Optional[str]:
     """Retrieve an integration token from the in-memory cache.
 
@@ -27,7 +31,8 @@ def get_cached_token(user_id: str, integration_name: str) -> Optional[str]:
     Returns:
         Optional[str]: The cached token if found, None otherwise.
     """
-    return None
+    cache_key = (user_id, integration_name)
+    return _token_cache.get(cache_key)
 
 def invalidate_token_cache(user_id: str, integration_name: str) -> None:
     """Remove a specific token from the cache.
@@ -37,8 +42,8 @@ def invalidate_token_cache(user_id: str, integration_name: str) -> None:
         integration_name (str): The name of the integration to invalidate.
     """
     cache_key = (user_id, integration_name)
-    if cache_key in get_cached_token.cache_info():
-        get_cached_token.cache_delete(cache_key)
+    if cache_key in _token_cache:
+        del _token_cache[cache_key]
 
 async def get_integration_token(
     session: AsyncSession, 
@@ -73,8 +78,9 @@ async def get_integration_token(
     if not token:
         raise TokenNotFoundError(f"No token found for {integration_name}")
     
-    get_cached_token.cache_clear()
-    get_cached_token(user_id, integration_name, token.token)
+    # Cache the token
+    cache_key = (user_id, integration_name)
+    _token_cache[cache_key] = token.token
     
     return token.token
 
@@ -136,11 +142,17 @@ async def get_upcoming_tasks(
         end_date=end_date.isoformat()
     )
 
+class EventIn(BaseModel):
+    title: str
+    start_time: str
+    end_time: str
+    description: Optional[str]
+
 async def sync_to_google_calendar(
     session: AsyncSession,
     user_id: str,
     calendar_id: str,
-    events: list[dict[str, Any]]
+    events: str
 ) -> list[dict[str, Any]]:
     """Synchronize Canvas events to Google Calendar.
 
@@ -148,7 +160,7 @@ async def sync_to_google_calendar(
         session (AsyncSession): The database session.
         user_id (str): The unique identifier of the user.
         calendar_id (str): The ID of the Google Calendar to sync to.
-        events (list[dict[str, Any]]): List of Canvas events to sync.
+        events (str): Json String of a list of Canvas events to sync. e.g., '[{"title": "Event 1", "start_time": "2024-11-01T00:00:00Z", "end_time": "2024-11-01T01:00:00Z", "description": "Description of Event 1"}]'
 
     Returns:
         list[dict[str, Any]]: List of created Google Calendar events.
@@ -161,19 +173,21 @@ async def sync_to_google_calendar(
     credentials = Credentials(
         token=google_token_data,
         token_uri="https://oauth2.googleapis.com/token",
-        client_id=settings.google_client_id,
-        client_secret=settings.google_client_secret,
+        client_id=settings.gcal_client_id,
+        client_secret=settings.gcal_client_secret, # TODO: add refresh token in table
     )
     
     created_events = []
-    for event in events:
+    events_dict = json.loads(events)
+    events_parsed = [EventIn.model_validate(event) for event in events_dict]
+    for event in events_parsed:
         created_event = external_usecase.add_study_schedule_to_google_calendar(
             google_credentials=credentials,
             calendar_id=calendar_id,
-            title=event["title"],
-            description=event.get("description", ""),
-            start_time=event["due_at"],
-            end_time=event["due_at"],
+            title=event.title,
+            description=event.description,
+            start_time=event.start_time,
+            end_time=event.end_time,
         )
         created_events.append(created_event)
     

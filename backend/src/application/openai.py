@@ -7,7 +7,7 @@ from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
 from src.application.openai_utils import function_to_schema
-from src.application.usecase import get_schedules, list_upcoming_tasks
+from src.application.usecase_v2 import get_study_progress, get_upcoming_tasks, list_canvas_courses, sync_to_google_calendar
 from src.deps import Container
 from src.settings import settings
 
@@ -29,10 +29,12 @@ class ScheduleAgentChatOutput(BaseModel):
     message: str
     actions: list[dict] | None = Field(default_factory=list)
 
-async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container) -> ScheduleAgentChatOutput:
+async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container, user_id: str) -> ScheduleAgentChatOutput:
     functions_to_call = {
-        "list_upcoming_tasks": partial(list_upcoming_tasks, canvas_client=container.canvas_client),
-        "get_schedules": partial(get_schedules, calendar_client=container.google_calendar_client),
+        "get_study_progress": partial(get_study_progress, session=container.db_session, user_id=user_id),
+        "sync_to_google_calendar": partial(sync_to_google_calendar, session=container.db_session, user_id=user_id),
+        "list_canvas_courses": partial(list_canvas_courses, session=container.db_session, user_id=user_id),
+        "get_upcoming_tasks": partial(get_upcoming_tasks, session=container.db_session, user_id=user_id),
     }
     # TODO: add chat history from database
     inmemory_chat_history.append({"role": "user", "content": message})

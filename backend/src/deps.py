@@ -105,7 +105,8 @@ class Container:
     def __init__(self, settings: Settings):
         self.google_calendar_client = GoogleCalendarClient(settings)
         self.canvas_client = CanvasClient(settings=settings)
-        # self.openai_client = OpenAIClient()
+        async_session = async_sessionmaker(bind=engine)
+        self.db_session = async_session()
 
 
 ApplicationContainer = Annotated[Container, Depends(lambda: Container(settings))]

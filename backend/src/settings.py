@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     # google calendar
     client_secrets_file: str = Field(default="client_secrets.json", alias="GCAL_CLIENT_SECRETS_FILE")
+    gcal_client_id: str = Field(alias="GCAL_CLIENT_ID")
+    gcal_client_secret: str = Field(alias="GCAL_CLIENT_SECRET")
     scopes: list[str] = Field(default=["https://www.googleapis.com/auth/calendar.readonly", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email", "openid"], alias="GCAL_SCOPES")
     redirect_uri: str = Field(default="http://localhost:8000/auth/google/oauth2callback", alias="GCAL_REDIRECT_URI")
 

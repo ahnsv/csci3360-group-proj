@@ -6,7 +6,7 @@ from typing import Any, Callable
 def function_to_schema(func: Callable[..., Any]) -> dict:
     type_map = {
         str: "string",
-        int: "integer",
+        int: "integer", 
         float: "number",
         bool: "boolean",
         list: "array",
@@ -28,6 +28,19 @@ def function_to_schema(func: Callable[..., Any]) -> dict:
             f"Failed to get signature for function {original_func.__name__}: {str(e)}"
         )
 
+    # Parse docstring to get parameter descriptions
+    docstring = inspect.getdoc(original_func) or ""
+    param_descriptions = {}
+    for line in docstring.split('\n'):
+        line = line.strip()
+        if line.startswith(':param'):
+            # Parse ":param param_name: description" format
+            parts = line[6:].split(':', 1)
+            if len(parts) == 2:
+                param_name = parts[0].strip()
+                description = parts[1].strip()
+                param_descriptions[param_name] = description
+
     parameters = {}
     for param_name, param in signature.parameters.items():
         if param_name not in partial_args:
@@ -37,7 +50,11 @@ def function_to_schema(func: Callable[..., Any]) -> dict:
                 raise KeyError(
                     f"Unknown type annotation {param.annotation} for parameter {param.name}: {str(e)}"
                 )
-            parameters[param_name] = {"type": param_type}
+            param_info = {
+                "type": param_type,
+                "description": param_descriptions.get(param_name, "")
+            }
+            parameters[param_name] = param_info
 
     required = [
         param_name

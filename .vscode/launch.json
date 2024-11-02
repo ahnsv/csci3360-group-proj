@@ -11,9 +11,7 @@
             "module": "uvicorn",
             "args": [
                 "src.api:app",
-                "--reload",
-                "--port",
-                "8001"
+                "--reload"
             ],
             "cwd": "${workspaceFolder}/backend",
             "justMyCode": false

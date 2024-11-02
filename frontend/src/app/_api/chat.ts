@@ -28,12 +28,20 @@ export async function chatWithScheduler(message: string, accessToken: string) {
 }
 
 export const checkRequiredIntegrations = async (accessToken: string) => {
-    const response = await fetch(`${API_URL}/auth/required-integrations/`, {
-        headers: {
-            'Authorization': `Bearer ${accessToken}`
-        },
-        signal: AbortSignal.timeout(5000)
-    });
+    let response;
+    try {
+        response = await fetch(`${API_URL}/auth/required-integrations/`, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            },
+            signal: AbortSignal.timeout(5000)
+        });
+    } catch (error) {
+        if (error instanceof DOMException && error.name === 'TimeoutError') {
+            redirect('/504')
+        }
+        throw error;
+    }
 
     if (response.status === 504) {
         redirect('/504')

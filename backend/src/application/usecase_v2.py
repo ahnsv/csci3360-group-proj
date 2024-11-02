@@ -131,15 +131,19 @@ async def get_upcoming_tasks(
     canvas_token = await get_integration_token(session, user_id, "canvas")
     
     if not start_date:
-        start_date = datetime.now()
+        start_date_dt = datetime.now()
+    else:
+        start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
     if not end_date:
-        end_date = start_date + timedelta(days=n_days)
+        end_date_dt = start_date_dt + timedelta(days=n_days)
+    else:
+        end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
     
     return external_usecase.fetch_canvas_events(
         canvas_api_url=settings.canvas_api_url,
         canvas_api_key=canvas_token,
-        start_date=start_date.isoformat(),
-        end_date=end_date.isoformat()
+        start_date=start_date_dt.isoformat(),
+        end_date=end_date_dt.isoformat()
     )
 
 class EventIn(BaseModel):

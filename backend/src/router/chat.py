@@ -26,7 +26,7 @@ class ChatResponse(BaseModel):
 
 @router.get("/", response_model=list[ChatResponse])
 async def get_chats(current_user: CurrentUser, session: AsyncDBSession):
-    chats = await session.execute(select(Chat).where(Chat.user_id == current_user.id))
+    chats = await session.execute(select(Chat).where(Chat.user_id == current_user.id).order_by(Chat.created_at))
     # get last 100 messages
     chats = chats.scalars().all()[-100:]
     return [

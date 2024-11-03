@@ -55,7 +55,7 @@ class Chat(Base):
         return f"<Chat(id={self.id}, user_id='{self.user_id}', author='{self.author}', created_at='{self.created_at}')>"
 
 
-class TASK_TYPE(enum.Enum):
+class TaskType(enum.Enum):
     ASSIGNMENT = "ASSIGNMENT"
     STUDY = "STUDY" 
     SOCIAL = "SOCIAL"
@@ -73,9 +73,9 @@ class Task(Base):
     end_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
     due_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
     link = Column(String, nullable=True)
-    type = Column(Enum(TASK_TYPE), nullable=True)
+    type = Column(Enum(TaskType, name="TASK_TYPE"), nullable=False)
 
-    profile = relationship("Profiles")
+    profile = relationship("Profiles", lazy="selectin")
 
     def __repr__(self):
         return f"<Task(id={self.id}, name='{self.name}', user_id='{self.user_id}', type='{self.type}')>"

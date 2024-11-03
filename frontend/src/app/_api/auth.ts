@@ -83,4 +83,4 @@ type Task = {
   type?: string;
 }
 
-export const useGetTasks = () => useApiCall<Task[]>('/tasks');
+export const useGetTasks = () => useApiCall<Task[]>('/task');

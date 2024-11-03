@@ -5,24 +5,29 @@ from typing import Any, Literal, Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-from pydantic import BaseModel
+from pydantic import BaseModel, parse_obj_as
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application import external_usecase
 from src.database.models import Integration, Task
-from src.schema import TaskIn
+from src.schema import TaskIn, TaskOut
 from src.settings import settings
 
 
 class TokenNotFoundError(Exception):
     """Exception raised when an integration token is not found."""
+
     pass
+
 
 # Dictionary to store cached tokens
 _token_cache = {}
 
-def get_cached_token(user_id: str, integration_name: str) -> Optional[tuple[str, str | None]]:
+
+def get_cached_token(
+    user_id: str, integration_name: str
+) -> Optional[tuple[str, str | None]]:
     """Retrieve an integration token from the in-memory cache.
 
     Args:
@@ -35,6 +40,7 @@ def get_cached_token(user_id: str, integration_name: str) -> Optional[tuple[str,
     cache_key = (user_id, integration_name)
     return _token_cache.get(cache_key)
 
+
 def invalidate_token_cache(user_id: str, integration_name: str) -> None:
     """Remove a specific token from the cache.
 
@@ -46,10 +52,9 @@ def invalidate_token_cache(user_id: str, integration_name: str) -> None:
     if cache_key in _token_cache:
         del _token_cache[cache_key]
 
+
 async def get_integration_token(
-    session: AsyncSession, 
-    user_id: str, 
-    integration_name: Literal["canvas", "google"]
+    session: AsyncSession, user_id: str, integration_name: Literal["canvas", "google"]
 ) -> tuple[str, str | None]:
     """Retrieve an integration token from cache or database.
 
@@ -67,23 +72,23 @@ async def get_integration_token(
     cached_tokens = get_cached_token(user_id, integration_name)
     if cached_tokens:
         return cached_tokens
-    
+
     uuid_user_id = uuid.UUID(user_id)
     query = select(Integration).where(
-        Integration.user_id == uuid_user_id,
-        Integration.type == integration_name
+        Integration.user_id == uuid_user_id, Integration.type == integration_name
     )
     result = await session.execute(query)
     token = result.scalar_one_or_none()
-    
+
     if not token:
         raise TokenNotFoundError(f"No token found for {integration_name}")
-    
+
     # Cache both tokens
     cache_key = (user_id, integration_name)
     _token_cache[cache_key] = (token.token, token.refresh_token)
-    
+
     return token.token, token.refresh_token
+
 
 async def list_canvas_courses(
     session: AsyncSession,
@@ -103,9 +108,9 @@ async def list_canvas_courses(
     """
     canvas_token, _ = await get_integration_token(session, user_id, "canvas")
     return external_usecase.fetch_canvas_courses(
-        canvas_api_url=settings.canvas_api_url,
-        canvas_api_key=canvas_token
+        canvas_api_url=settings.canvas_api_url, canvas_api_key=canvas_token
     )
+
 
 async def get_upcoming_tasks(
     session: AsyncSession,
@@ -130,7 +135,7 @@ async def get_upcoming_tasks(
         TokenNotFoundError: If no Canvas token is found for the user.
     """
     canvas_token, _ = await get_integration_token(session, user_id, "canvas")
-    
+
     if not start_date:
         start_date_dt = datetime.now()
     else:
@@ -139,13 +144,14 @@ async def get_upcoming_tasks(
         end_date_dt = start_date_dt + timedelta(days=n_days)
     else:
         end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
-    
+
     return external_usecase.fetch_canvas_events(
         canvas_api_url=settings.canvas_api_url,
         canvas_api_key=canvas_token,
         start_date=start_date_dt.isoformat(),
-        end_date=end_date_dt.isoformat()
+        end_date=end_date_dt.isoformat(),
     )
+
 
 class EventIn(BaseModel):
     title: str
@@ -153,11 +159,9 @@ class EventIn(BaseModel):
     end_time: str
     description: Optional[str]
 
+
 async def sync_to_google_calendar(
-    session: AsyncSession,
-    user_id: str,
-    calendar_id: str,
-    events: str
+    session: AsyncSession, user_id: str, calendar_id: str, events: str
 ) -> list[dict[str, Any]]:
     """Synchronize Canvas events to Google Calendar.
 
@@ -173,8 +177,10 @@ async def sync_to_google_calendar(
     Raises:
         TokenNotFoundError: If no Google token is found for the user.
     """
-    google_token_data, refresh_token = await get_integration_token(session, user_id, "google")
-    
+    google_token_data, refresh_token = await get_integration_token(
+        session, user_id, "google"
+    )
+
     credentials = Credentials(
         token=google_token_data,
         token_uri="https://oauth2.googleapis.com/token",
@@ -186,12 +192,13 @@ async def sync_to_google_calendar(
     if credentials.expired:
         credentials.refresh(Request())
         await session.execute(
-            update(Integration).where(
-                Integration.user_id == uuid.UUID(user_id),
-                Integration.type == "google"
-            ).values(token=credentials.token, refresh_token=credentials.refresh_token)
+            update(Integration)
+            .where(
+                Integration.user_id == uuid.UUID(user_id), Integration.type == "google"
+            )
+            .values(token=credentials.token, refresh_token=credentials.refresh_token)
         )
-    
+
     created_events = []
     events_dict = json.loads(events)
     events_parsed = [EventIn.model_validate(event) for event in events_dict]
@@ -205,13 +212,12 @@ async def sync_to_google_calendar(
             end_time=event.end_time,
         )
         created_events.append(created_event)
-    
+
     return created_events
 
+
 async def get_study_progress(
-    session: AsyncSession,
-    user_id: str,
-    course_id: str
+    session: AsyncSession, user_id: str, course_id: str
 ) -> list[dict[str, Any]]:
     """Retrieve study progress for a specific course.
 
@@ -227,19 +233,37 @@ async def get_study_progress(
         TokenNotFoundError: If no Canvas token is found for the user.
     """
     canvas_token, _ = await get_integration_token(session, user_id, "canvas")
-    
+
     return external_usecase.fetch_study_progress(
         canvas_api_url=settings.canvas_api_url,
         canvas_api_key=canvas_token,
         course_id=course_id,
-        user_id=user_id
+        user_id=user_id,
+    )
+
+
+async def create_task_from_dict(
+    session: AsyncSession, user_id: str, task_dict_str: str
+) -> dict[str, Any]:
+    """Create a new task from a dictionary.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (str): The unique identifier of the user.
+        task_dict_str (str): The task data as a JSON string. (e.g., '{"name": "Task 1", "description": "Description of Task 1", "start_at": "2024-11-01T00:00:00Z", "end_at": "2024-11-01T01:00:00Z", "due_at": "2024-11-01T02:00:00Z", "link": "https://example.com", "type": "ASSIGNMENT"}')
+
+    type: TASK_TYPE (e.g., "ASSIGNMENT", "STUDY", "SOCIAL", "CHORE")
+
+    Returns:
+        dict[str, Any]: The created task.
+    """
+    return await create_task(
+        session, user_id, TaskIn.model_validate_json(task_dict_str)
     )
 
 
 async def create_task(
-    session: AsyncSession,
-    user_id: str,
-    task: TaskIn
+    session: AsyncSession, user_id: str, task: TaskIn
 ) -> dict[str, Any]:
     """Create a new task.
 
@@ -263,7 +287,9 @@ async def create_task(
     )
     session.add(task)
     await session.commit()
-    return task.model_dump()
+    await session.refresh(task)
+    return TaskOut.model_validate(task).model_dump(mode="json")
+
 
 async def list_tasks(
     session: AsyncSession,
@@ -280,13 +306,10 @@ async def list_tasks(
     """
     query = select(Task).where(Task.user_id == uuid.UUID(user_id))
     result = await session.execute(query)
-    return [task.model_dump() for task in result.scalars().all()]   
+    return [TaskOut.model_validate(task).model_dump(mode="json") for task in result.scalars().all()]
 
-async def get_task(
-    session: AsyncSession,
-    user_id: str,
-    task_id: int
-) -> dict[str, Any]:
+
+async def get_task(session: AsyncSession, user_id: str, task_id: int) -> dict[str, Any]:
     """Retrieve a task by its ID.
 
     Args:
@@ -299,4 +322,4 @@ async def get_task(
     """
     query = select(Task).where(Task.user_id == uuid.UUID(user_id), Task.id == task_id)
     result = await session.execute(query)
-    return result.scalar_one_or_none().model_dump()
+    return TaskOut.model_validate(result.scalar_one_or_none()).model_dump(mode="json")

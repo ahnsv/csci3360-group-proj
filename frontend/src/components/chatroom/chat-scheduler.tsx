@@ -10,17 +10,26 @@ import { useGetTasks } from "@/app/_api/auth";
 
 export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
-    const { data: tasks, isLoading, error } = useGetTasks();
+    const { data: tasks, isLoading, error, execute } = useGetTasks();
 
-    // Mock schedule data
-    const schedules = [
-        {id: 1, title: 'Team Meeting', date: '2024-11-04', time: '10:00 AM'},
-        {id: 2, title: 'Project Review', date: '2024-11-05', time: '2:00 PM'},
-        {id: 3, title: 'Client Call', date: '2024-11-06', time: '11:30 AM'},
-    ]
+    React.useEffect(() => {
+        execute({
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`
+            }
+        });
+    }, [execute]);
 
     const TaskList = () => {
-        if (isLoading) return <div>Loading...</div>;
+        if (isLoading) return (
+            <div className="flex items-center justify-center py-4">
+                <div className="space-y-3">
+                    <div className="w-[200px] h-[20px] bg-gray-200 rounded-full animate-pulse" />
+                    <div className="w-[150px] h-[20px] bg-gray-200 rounded-full animate-pulse" />
+                </div>
+            </div>
+        );
         if (error) return <div>Error: {error.message}</div>;
 
         if (!tasks) return <div className="text-gray-500 text-center py-4">No tasks found</div>;
@@ -30,6 +39,10 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                     <Card key={task.id} className="mb-4">
                         <CardContent className="p-4">
                             <h3 className="font-semibold">{task.name}</h3>
+                            <p className="text-sm text-gray-500">{task.description}</p>
+                            <p className="text-sm text-gray-500">{task.due_at}</p>
+                            <p className="text-sm text-gray-500">{task.link}</p>
+                            <p className="text-sm text-gray-500">{task.type}</p>
                         </CardContent>
                     </Card>
                 ))}

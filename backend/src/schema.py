@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
-from src.database.models import TASK_TYPE
+from src.database.models import TaskType
 
 
 class User(BaseModel):
@@ -15,8 +16,13 @@ class User(BaseModel):
 class TaskIn(BaseModel):
     name: str
     description: Optional[str]
-    start_at: Optional[str]
-    end_at: Optional[str]
-    due_at: Optional[str]
-    link: Optional[str]
-    type: TASK_TYPE
+    start_at: Optional[datetime]
+    end_at: Optional[datetime]
+    due_at: Optional[datetime]
+    link: Optional[str] = Field(default=None)
+    type: TaskType
+
+class TaskOut(TaskIn):
+    id: int
+
+    model_config = ConfigDict(from_attributes=True)

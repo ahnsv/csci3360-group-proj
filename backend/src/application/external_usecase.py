@@ -3,7 +3,7 @@ from typing import Any  # noqa
 from canvasapi import Canvas
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-
+from settings import settings
 
 def fetch_canvas_courses(canvas_api_url: str, canvas_api_key: str, **kwargs):
     """
@@ -96,7 +96,7 @@ def fetch_canvas_events(
                     "due_at": item["plannable"]["due_at"],
                     "course_name": item["context_name"],
                     "course_id": item["course_id"],
-                    "html_url": item["html_url"],
+                    "html_url": settings.canvas_api_url + item["html_url"],
                 }
             )
         elif item["plannable_type"] == "quiz":
@@ -106,7 +106,7 @@ def fetch_canvas_events(
                     "due_at": item["plannable"]["due_at"],
                     "course_name": item["context_name"],
                     "course_id": item["course_id"],
-                    "html_url": item["html_url"],
+                    "html_url": settings.canvas_api_url + item["html_url"],
                     "type": "quiz",
                 }
             )

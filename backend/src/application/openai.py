@@ -41,7 +41,7 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
     # TODO: add chat history from database
     inmemory_chat_history.append({"role": "user", "content": message})
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4o-mini",
         messages=inmemory_chat_history,
         tools=list([function_to_schema(f) for f in functions_to_call.values()]),
         tool_choice="auto",

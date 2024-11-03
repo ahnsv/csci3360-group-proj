@@ -1,5 +1,5 @@
-from datetime import datetime
 import json
+from datetime import datetime
 from functools import partial
 from typing import Annotated
 
@@ -8,7 +8,12 @@ from openai import AsyncOpenAI, OpenAI
 from pydantic import BaseModel, Field
 
 from src.application.openai_utils import function_to_schema
-from src.application.usecase_v2 import get_study_progress, get_upcoming_tasks, list_canvas_courses, sync_to_google_calendar
+from src.application.usecase_v2 import (
+    get_study_progress,
+    get_upcoming_tasks,
+    list_canvas_courses,
+    sync_to_google_calendar,
+)
 from src.deps import Container
 from src.settings import settings
 
@@ -29,7 +34,7 @@ inmemory_chat_history = [
 class ScheduleAgentChatOutput(BaseModel):
     message: str
     actions: list[dict] | None = Field(default_factory=list)
-    sent_at: datetime = Field(default_factory=datetime.now)
+    sent_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="ISO 8601 formatted datetime string")
 
 async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container, user_id: str) -> ScheduleAgentChatOutput:
     functions_to_call = {

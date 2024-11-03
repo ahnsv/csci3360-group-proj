@@ -21,7 +21,7 @@ class TokenNotFoundError(Exception):
 # Dictionary to store cached tokens
 _token_cache = {}
 
-def get_cached_token(user_id: str, integration_name: str) -> Optional[str]:
+def get_cached_token(user_id: str, integration_name: str) -> Optional[tuple[str, str | None]]:
     """Retrieve an integration token from the in-memory cache.
 
     Args:
@@ -29,7 +29,7 @@ def get_cached_token(user_id: str, integration_name: str) -> Optional[str]:
         integration_name (str): The name of the integration (e.g., "canvas", "google").
 
     Returns:
-        Optional[str]: The cached token if found, None otherwise.
+        Optional[tuple[str, str | None]]: Tuple of (token, refresh_token) if found, None otherwise.
     """
     cache_key = (user_id, integration_name)
     return _token_cache.get(cache_key)
@@ -49,7 +49,7 @@ async def get_integration_token(
     session: AsyncSession, 
     user_id: str, 
     integration_name: Literal["canvas", "google"]
-) -> str:
+) -> tuple[str, str | None]:
     """Retrieve an integration token from cache or database.
 
     Args:
@@ -58,14 +58,14 @@ async def get_integration_token(
         integration_name (Literal["canvas", "google"]): The name of the integration.
 
     Returns:
-        str: The integration token.
+        tuple[str, str | None]: Tuple containing the integration token and refresh token.
 
     Raises:
         TokenNotFoundError: If no token is found for the specified integration.
     """
-    cached_token = get_cached_token(user_id, integration_name)
-    if cached_token:
-        return cached_token, None
+    cached_tokens = get_cached_token(user_id, integration_name)
+    if cached_tokens:
+        return cached_tokens
     
     uuid_user_id = uuid.UUID(user_id)
     query = select(Integration).where(
@@ -78,9 +78,9 @@ async def get_integration_token(
     if not token:
         raise TokenNotFoundError(f"No token found for {integration_name}")
     
-    # Cache the token
+    # Cache both tokens
     cache_key = (user_id, integration_name)
-    _token_cache[cache_key] = token.token
+    _token_cache[cache_key] = (token.token, token.refresh_token)
     
     return token.token, token.refresh_token
 
@@ -182,7 +182,7 @@ async def sync_to_google_calendar(
         refresh_token=refresh_token,
     )
 
-    if not credentials.valid:
+    if credentials.expired:
         credentials.refresh(Request())
         await session.execute(
             update(Integration).where(

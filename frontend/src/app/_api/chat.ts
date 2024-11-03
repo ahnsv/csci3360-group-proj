@@ -10,7 +10,7 @@ export async function chatWithScheduler(message: string, accessToken: string) {
         body: JSON.stringify({
             author: 'user',
             message: message,
-            sent_at: new Date().toISOString(),
+            sent_at: new Date(),
         }),
     });
 
@@ -21,8 +21,8 @@ export async function chatWithScheduler(message: string, accessToken: string) {
 
     const data = await response.json();
     return {
-        author: data.author,
-        message: data.message,
+        author: data.author as string,
+        message: data.message as string,
         sent_at: new Date(data.sent_at),
     };
 }
@@ -58,8 +58,8 @@ export const checkRequiredIntegrations = async (accessToken: string) => {
     }
 
     return {
-      data: await response.json(),
-      error: null,
+        data: await response.json(),
+        error: null,
     }
 
 }
@@ -75,5 +75,11 @@ export const getChatMessages = async (accessToken: string) => {
         throw new Error('Failed to fetch chat messages');
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data.map((msg: Record<string, any>) => ({
+        author: msg.author,
+        message: msg.message,
+        sent_at: new Date(msg.sent_at),
+        actions: msg?.actions,
+    }));
 }

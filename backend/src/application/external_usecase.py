@@ -3,6 +3,7 @@ from typing import Any  # noqa
 from canvasapi import Canvas
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
 from src.settings import settings
 
 def fetch_canvas_courses(canvas_api_url: str, canvas_api_key: str, **kwargs):

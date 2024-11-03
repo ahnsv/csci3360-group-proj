@@ -76,10 +76,10 @@ export const getChatMessages = async (accessToken: string) => {
     }
 
     const data = await response.json();
-    return data.map((msg: Record<string, any>) => ({
+    return data.map((msg: Record<string, unknown>) => ({
         author: msg.author,
         message: msg.message,
-        sent_at: new Date(msg.sent_at),
+        sent_at: new Date(msg.sent_at as string),
         actions: msg?.actions,
     }));
 }

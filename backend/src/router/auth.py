@@ -86,6 +86,7 @@ async def oauth2callback(
             integration = Integration(
                 type="google",
                 token=credentials.token,
+                refresh_token=credentials.refresh_token,
                 expire_at=credentials.expiry,
                 user_id=user.id
             )

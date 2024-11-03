@@ -1,12 +1,12 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from functools import lru_cache
 from typing import Any, Literal, Optional
 
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application import external_usecase
@@ -65,7 +65,7 @@ async def get_integration_token(
     """
     cached_token = get_cached_token(user_id, integration_name)
     if cached_token:
-        return cached_token
+        return cached_token, None
     
     uuid_user_id = uuid.UUID(user_id)
     query = select(Integration).where(
@@ -82,7 +82,7 @@ async def get_integration_token(
     cache_key = (user_id, integration_name)
     _token_cache[cache_key] = token.token
     
-    return token.token
+    return token.token, token.refresh_token
 
 async def list_canvas_courses(
     session: AsyncSession,
@@ -100,7 +100,7 @@ async def list_canvas_courses(
     Raises:
         TokenNotFoundError: If no Canvas token is found for the user.
     """
-    canvas_token = await get_integration_token(session, user_id, "canvas")
+    canvas_token, _ = await get_integration_token(session, user_id, "canvas")
     return external_usecase.fetch_canvas_courses(
         canvas_api_url=settings.canvas_api_url,
         canvas_api_key=canvas_token
@@ -128,7 +128,7 @@ async def get_upcoming_tasks(
     Raises:
         TokenNotFoundError: If no Canvas token is found for the user.
     """
-    canvas_token = await get_integration_token(session, user_id, "canvas")
+    canvas_token, _ = await get_integration_token(session, user_id, "canvas")
     
     if not start_date:
         start_date_dt = datetime.now()
@@ -172,14 +172,24 @@ async def sync_to_google_calendar(
     Raises:
         TokenNotFoundError: If no Google token is found for the user.
     """
-    google_token_data = await get_integration_token(session, user_id, "google")
+    google_token_data, refresh_token = await get_integration_token(session, user_id, "google")
     
     credentials = Credentials(
         token=google_token_data,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=settings.gcal_client_id,
-        client_secret=settings.gcal_client_secret, # TODO: add refresh token in table
+        client_secret=settings.gcal_client_secret,
+        refresh_token=refresh_token,
     )
+
+    if not credentials.valid:
+        credentials.refresh(Request())
+        await session.execute(
+            update(Integration).where(
+                Integration.user_id == uuid.UUID(user_id),
+                Integration.type == "google"
+            ).values(token=credentials.token, refresh_token=credentials.refresh_token)
+        )
     
     created_events = []
     events_dict = json.loads(events)
@@ -215,7 +225,7 @@ async def get_study_progress(
     Raises:
         TokenNotFoundError: If no Canvas token is found for the user.
     """
-    canvas_token = await get_integration_token(session, user_id, "canvas")
+    canvas_token, _ = await get_integration_token(session, user_id, "canvas")
     
     return external_usecase.fetch_study_progress(
         canvas_api_url=settings.canvas_api_url,

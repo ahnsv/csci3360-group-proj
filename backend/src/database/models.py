@@ -29,6 +29,7 @@ class Integration(Base):
     expire_at = Column(DateTime(timezone=True), nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
     user_id = Column(UUID(as_uuid=True), ForeignKey('profiles.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    refresh_token = Column(String, nullable=True)
 
     profile = relationship("Profiles", back_populates="integrations")
 

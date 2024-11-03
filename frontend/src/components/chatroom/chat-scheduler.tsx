@@ -6,9 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from 'react';
 import ChatArea from './chat-area';
+import { useGetTasks } from "@/app/_api/auth";
 
 export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
+    const { data: tasks, isLoading, error } = useGetTasks();
 
     // Mock schedule data
     const schedules = [
@@ -16,6 +18,24 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
         {id: 2, title: 'Project Review', date: '2024-11-05', time: '2:00 PM'},
         {id: 3, title: 'Client Call', date: '2024-11-06', time: '11:30 AM'},
     ]
+
+    const TaskList = () => {
+        if (isLoading) return <div>Loading...</div>;
+        if (error) return <div>Error: {error.message}</div>;
+
+        if (!tasks) return <div className="text-gray-500 text-center py-4">No tasks found</div>;
+        return (
+            <ScrollArea className="h-[calc(100vh-120px)]">
+                {tasks?.map((task) => (
+                    <Card key={task.id} className="mb-4">
+                        <CardContent className="p-4">
+                            <h3 className="font-semibold">{task.name}</h3>
+                        </CardContent>
+                    </Card>
+                ))}
+            </ScrollArea>
+        )
+    }
 
     return (
         <div className="flex h-full bg-gray-100 text-sm tracking-tight">
@@ -25,21 +45,14 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
             
             {/* Schedule View */}
             <div className="w-1/2 p-4 bg-white">
-                <Tabs defaultValue="list">
+                <Tabs defaultValue="list" className="flex flex-col items-center">
                     <TabsList className="mb-4">
                         <TabsTrigger value="list">List View</TabsTrigger>
                         <TabsTrigger value="calendar">Calendar View</TabsTrigger>
                     </TabsList>
                     <TabsContent value="list">
                         <ScrollArea className="h-[calc(100vh-120px)]">
-                            {schedules.map((schedule) => (
-                                <Card key={schedule.id} className="mb-4">
-                                    <CardContent className="p-4">
-                                        <h3 className="font-semibold">{schedule.title}</h3>
-                                        <p className="text-sm text-gray-500">{schedule.date} at {schedule.time}</p>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                            <TaskList />
                         </ScrollArea>
                     </TabsContent>
                     <TabsContent value="calendar">

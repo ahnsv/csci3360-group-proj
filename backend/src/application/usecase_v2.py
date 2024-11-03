@@ -10,7 +10,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application import external_usecase
-from src.database.models import Integration
+from src.database.models import Integration, Task
+from src.schema import TaskIn
 from src.settings import settings
 
 
@@ -233,3 +234,69 @@ async def get_study_progress(
         course_id=course_id,
         user_id=user_id
     )
+
+
+async def create_task(
+    session: AsyncSession,
+    user_id: str,
+    task: TaskIn
+) -> dict[str, Any]:
+    """Create a new task.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (str): The unique identifier of the user.
+        task (TaskIn): The task to create.
+
+    Returns:
+        dict[str, Any]: The created task.
+    """
+    task = Task(
+        name=task.name,
+        description=task.description,
+        user_id=user_id,
+        start_at=task.start_at,
+        end_at=task.end_at,
+        due_at=task.due_at,
+        link=task.link,
+        type=task.type,
+    )
+    session.add(task)
+    await session.commit()
+    return task.model_dump()
+
+async def list_tasks(
+    session: AsyncSession,
+    user_id: str,
+) -> list[dict[str, Any]]:
+    """Retrieve a list of tasks for a user.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (str): The unique identifier of the user.
+
+    Returns:
+        list[dict[str, Any]]: List of tasks.
+    """
+    query = select(Task).where(Task.user_id == uuid.UUID(user_id))
+    result = await session.execute(query)
+    return [task.model_dump() for task in result.scalars().all()]   
+
+async def get_task(
+    session: AsyncSession,
+    user_id: str,
+    task_id: int
+) -> dict[str, Any]:
+    """Retrieve a task by its ID.
+
+    Args:
+        session (AsyncSession): The database session.
+        user_id (str): The unique identifier of the user.
+        task_id (int): The ID of the task to retrieve.
+
+    Returns:
+        dict[str, Any]: The task.
+    """
+    query = select(Task).where(Task.user_id == uuid.UUID(user_id), Task.id == task_id)
+    result = await session.execute(query)
+    return result.scalar_one_or_none().model_dump()

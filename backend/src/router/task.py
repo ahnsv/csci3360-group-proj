@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
+from src.application import usecase_v2
 from src.database.models import Task
 from src.deps import AsyncDBSession, CurrentUser
 from src.schema import TaskIn
-from src.application import usecase_v2
 
 router = APIRouter(prefix="/task", tags=["task"])
 

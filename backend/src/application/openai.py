@@ -9,9 +9,12 @@ from pydantic import BaseModel, Field
 
 from src.application.openai_utils import function_to_schema
 from src.application.usecase_v2 import (
+    create_task,
     get_study_progress,
+    get_task,
     get_upcoming_tasks,
     list_canvas_courses,
+    list_tasks,
     sync_to_google_calendar,
 )
 from src.deps import Container
@@ -42,6 +45,9 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
         "sync_to_google_calendar": partial(sync_to_google_calendar, session=container.db_session, user_id=user_id),
         "list_canvas_courses": partial(list_canvas_courses, session=container.db_session, user_id=user_id),
         "get_upcoming_tasks": partial(get_upcoming_tasks, session=container.db_session, user_id=user_id),
+        "create_task": partial(create_task, session=container.db_session, user_id=user_id),
+        "list_tasks": partial(list_tasks, session=container.db_session, user_id=user_id),
+        "get_task": partial(get_task, session=container.db_session, user_id=user_id),
     }
     # TODO: add chat history from database
     inmemory_chat_history.append({"role": "user", "content": message})

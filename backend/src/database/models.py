@@ -1,4 +1,6 @@
-from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, String, Text
+import enum
+
+from sqlalchemy import BigInteger, Column, DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -51,3 +53,29 @@ class Chat(Base):
 
     def __repr__(self):
         return f"<Chat(id={self.id}, user_id='{self.user_id}', author='{self.author}', created_at='{self.created_at}')>"
+
+
+class TASK_TYPE(enum.Enum):
+    ASSIGNMENT = "ASSIGNMENT"
+    STUDY = "STUDY" 
+    SOCIAL = "SOCIAL"
+    CHORE = "CHORE"
+
+class Task(Base):
+    __tablename__ = 'task'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('profiles.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    start_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
+    end_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
+    due_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now())
+    link = Column(String, nullable=True)
+    type = Column(Enum(TASK_TYPE), nullable=True)
+
+    profile = relationship("Profiles")
+
+    def __repr__(self):
+        return f"<Task(id={self.id}, name='{self.name}', user_id='{self.user_id}', type='{self.type}')>"

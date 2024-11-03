@@ -70,4 +70,17 @@ export const useCanvasConnect = () => useApiCall<{ success: boolean, message: st
 export const useGoogleConnect = () => useApiCall<{ connected: boolean }>('/auth/google/connect');
 export const useRequiredIntegrations = () => useApiCall<{ google: boolean, canvas: boolean }>('/auth/required-integrations');
 
+type Task = {
+  id: number;
+  created_at: string;
+  name: string;
+  description?: string;
+  user_id: string;
+  start_at?: string;
+  end_at?: string;
+  due_at?: string;
+  link?: string;
+  type?: string;
+}
 
+export const useGetTasks = () => useApiCall<Task[]>('/tasks');

@@ -63,3 +63,17 @@ export const checkRequiredIntegrations = async (accessToken: string) => {
     }
 
 }
+
+export const getChatMessages = async (accessToken: string) => {
+    const response = await fetch(`${API_URL}/chat/`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch chat messages');
+    }
+
+    return await response.json();
+}

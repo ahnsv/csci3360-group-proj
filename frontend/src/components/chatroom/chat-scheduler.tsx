@@ -8,8 +8,8 @@ import {Button} from "@/components/ui/button"
 import {Input} from "@/components/ui/input"
 import {Calendar} from "@/components/ui/calendar"
 import {Card, CardContent} from "@/components/ui/card"
-import {Send, Loader2} from "lucide-react"
-import { chatWithScheduler } from '@/app/_api/chat';
+import {Send, Loader2, ChevronDown} from "lucide-react"
+import { chatWithScheduler, getChatMessages } from '@/app/_api/chat';
 import ReactMarkdown from 'react-markdown'
 
 function formatTimestamp(date: Date): string {
@@ -28,13 +28,57 @@ function formatTimestamp(date: Date): string {
     });
 }
 
+type ChatMessage = {
+    author: string
+    message: string
+    sent_at: Date
+}
+
+function ScrollToBottomButton({ onClick }: { onClick: () => void }) {
+    return (
+        <Button
+            variant="secondary"
+            size="icon"
+            className="absolute bottom-20 right-4 rounded-full shadow-lg"
+            onClick={onClick}
+            aria-label="Scroll to bottom"
+            id="scroll-to-bottom-button"
+        >
+            <ChevronDown className="h-4 w-4" />
+        </Button>
+    )
+}
+
 export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
-    const [chatMessages, setChatMessages] = React.useState([
-        {author: 'agent', message: 'Hello! How can I assist you today?', sent_at: new Date()}
-    ])
+    const [chatMessages, setChatMessages] = React.useState<ChatMessage[]>([])
     const [inputMessage, setInputMessage] = React.useState('')
     const [isLoading, setIsLoading] = React.useState(false)
+    const [showScrollButton, setShowScrollButton] = React.useState(false)
+    const scrollAreaRef = React.useRef<HTMLDivElement>(null)
+
+    React.useEffect(() => {
+        // Initial fetch
+        getChatMessages(accessToken).then((messages) => {
+            setChatMessages(messages.map((msg: {author: string, message: string, sent_at: string}) => ({
+                author: msg.author,
+                message: msg.message,
+                sent_at: new Date(msg.sent_at),
+            })))
+        })
+
+        const interval = setInterval(() => {
+            getChatMessages(accessToken).then((messages) => {
+                setChatMessages(messages.map((msg: {author: string, message: string, sent_at: string}) => ({
+                    author: msg.author,
+                    message: msg.message,
+                    sent_at: new Date(msg.sent_at),
+                })))
+            })
+        }, 1000)
+
+        return () => clearInterval(interval)
+    }, [accessToken])
 
     // Mock schedule data
     const schedules = [
@@ -47,38 +91,63 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
         e.preventDefault()
         if (!inputMessage.trim()) return
 
-        // Add user message to chat
-        const userMessage = {author: 'User', message: inputMessage, sent_at: new Date()}
-        setChatMessages(prev => [...prev, userMessage])
-
-        // Clear input
-        setInputMessage('')
-
-        // Set loading to true
         setIsLoading(true)
+        const messageText = inputMessage
+        setInputMessage('') // Clear input immediately for better UX
 
         try {
             // Send message to server and get response
-            const aiResponse = await chatWithScheduler(inputMessage, accessToken)
-            setChatMessages(prev => [...prev, aiResponse])
+            const aiResponse = await chatWithScheduler(messageText, accessToken)
+            
+            // Get latest messages after sending to ensure consistency
+            const updatedMessages = await getChatMessages(accessToken)
+            setChatMessages(updatedMessages.map((msg: {author: string, message: string, sent_at: string}) => ({
+                author: msg.author,
+                message: msg.message,
+                sent_at: new Date(msg.sent_at),
+            })))
         } catch (error) {
             console.error('Error sending message:', error)
-            // Optionally, add an error message to the chat
-            setChatMessages(prev => [...prev, {author: 'AI', message: 'Sorry, there was an error processing your request.', sent_at: new Date()}])
+            // Add error message only if API call failed
+            setChatMessages(prev => [...prev, {
+                author: 'AI', 
+                message: 'Sorry, there was an error processing your request.', 
+                sent_at: new Date()
+            }])
         } finally {
-            // Set loading to false when done
             setIsLoading(false)
         }
     }
 
+    const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+        const target = event.target as HTMLDivElement
+        const isScrolledUp = target.scrollTop < target.scrollHeight - target.clientHeight - 100
+        setShowScrollButton(isScrolledUp)
+    }
+
+    const scrollToBottom = () => {
+        if (scrollAreaRef.current) {
+            const scrollArea = scrollAreaRef.current
+            scrollArea.scrollTop = scrollArea.scrollHeight
+        }
+    }
+
+    React.useEffect(() => {
+        scrollToBottom()
+    }, [chatMessages])
+
     return (
         <div className="flex h-full bg-gray-100 text-sm tracking-tight">
             {/* Chat Interface */}
-            <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white">
-                <ScrollArea className="flex-grow p-4">
+            <div className="w-1/2 flex flex-col border-r border-gray-200 bg-white relative">
+                <ScrollArea 
+                    className="h-[calc(100vh-90px)] p-4"
+                    ref={scrollAreaRef}
+                    onScroll={handleScroll}
+                >
                     {chatMessages.map((msg, index) => (
                         <div key={index}
-                             className={`flex items-start mb-4 ${msg.author === 'User' ? 'justify-end' : ''}`}>
+                             className={`flex items-start mb-4 ${msg.author === 'user' ? 'justify-end' : ''}`}>
                             {msg.author === 'agent' && (
                                 <Avatar className="mr-2">
                                     <AvatarImage src="/placeholder.svg?height=40&width=40" alt="AI"/>
@@ -87,7 +156,7 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                             )}
                             <div className="flex flex-col">
                                 <div
-                                    className={`rounded-lg p-2 ${msg.author === 'User' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
+                                    className={`rounded-lg p-2 ${msg.author === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
                                     <ReactMarkdown className="prose dark:prose-invert max-w-none">
                                         {msg.message}
                                     </ReactMarkdown>
@@ -96,7 +165,7 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                                     {formatTimestamp(msg.sent_at)}
                                 </span>
                             </div>
-                            {msg.author === 'User' && (
+                            {msg.author === 'user' && (
                                 <Avatar className="ml-2">
                                     <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User"/>
                                     <AvatarFallback>U</AvatarFallback>
@@ -117,7 +186,10 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                         </div>
                     )}
                 </ScrollArea>
-                <div className="p-4 border-t border-gray-200">
+                
+                {showScrollButton && <ScrollToBottomButton onClick={scrollToBottom} />}
+                
+                <div className="px-4 border-t border-gray-200 flex-1 h-24 p-2">
                     <form className="flex items-center" onSubmit={handleSubmit}>
                         <Input 
                             type="text" 

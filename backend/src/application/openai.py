@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from functools import partial
 from typing import Annotated
@@ -28,6 +29,7 @@ inmemory_chat_history = [
 class ScheduleAgentChatOutput(BaseModel):
     message: str
     actions: list[dict] | None = Field(default_factory=list)
+    sent_at: datetime = Field(default_factory=datetime.now)
 
 async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container, user_id: str) -> ScheduleAgentChatOutput:
     functions_to_call = {

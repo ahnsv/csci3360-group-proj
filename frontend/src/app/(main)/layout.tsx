@@ -7,8 +7,8 @@ export default function MainLayout({children}: Readonly<{
     return (
         <SidebarProvider defaultOpen={false}>
           <AppSidebar />
-          <main className="w-full h-full">
-            <SidebarTrigger  className="my-1 mx-2 p-1"/>
+          <main className="w-full h-full flex flex-col">
+            <SidebarTrigger  className="p-1 ml-4"/>
             {children}
           </main>
         </SidebarProvider>

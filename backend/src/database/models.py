@@ -45,7 +45,7 @@ class Chat(Base):
     author = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), nullable=True, server_default=func.now(), onupdate=func.now())
     content = Column(String, nullable=True)
-    extra = Column(Text, nullable=True)  # Using Text for JSONB representation
+    # extra = Column(J, nullable=True)  # Using Text for JSONB representation
 
     profile = relationship("Profiles")
 

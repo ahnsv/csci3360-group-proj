@@ -1,25 +1,28 @@
 'use client';
 
+import { useGetTasks } from "@/app/_api/auth";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from 'react';
-import ChatArea from './chat-area';
-import { useGetTasks } from "@/app/_api/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import ChatArea from './chat-area';
 
 export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
     const { data: tasks, isLoading, error, execute } = useGetTasks();
 
     React.useEffect(() => {
-        execute({
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        });
+        const interval = setInterval(() => {
+            execute({
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`
+                }
+            });
+        }, 3000);
+        return () => clearInterval(interval);
     }, [execute]);
 
     const TaskList = () => {
@@ -97,7 +100,49 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                             selected={date}
                             onSelect={setDate}
                             className="rounded-md border"
+                            modifiers={{
+                                hasTasks: tasks?.map(task => new Date(task.due_at || '')) || []
+                            }}
+                            modifiersStyles={{
+                                hasTasks: {
+                                    backgroundColor: "#e2e8f0",
+                                    fontWeight: "bold"
+                                }
+                            }}
+                            components={{
+                                DayContent: ({ date }) => {
+                                    const dayTasks = tasks?.filter(task => 
+                                        new Date(task.due_at || '').toDateString() === date.toDateString()
+                                    );
+                                    return (
+                                        <div className="relative">
+                                            <div>{date.getDate()}</div>
+                                            {dayTasks && dayTasks.length > 0 && (
+                                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                                                    <div className="h-1 w-1 rounded-full bg-blue-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }
+                            }}
                         />
+                        {/* Add List of Tasks for the selected date */}
+                        <ScrollArea className="mt-4">
+                            {
+                                tasks?.filter((task) => 
+                                    new Date(task.due_at || '').toDateString() === date?.toDateString()
+                                )
+                                .map((task) => (
+                                    <Card key={task.id} className="mb-4">
+                                        <CardContent className="p-4">
+                                            <p className="font-semibold">{task.name}</p>
+                                            <p className="text-sm text-gray-500">{task.description}</p>
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            }
+                        </ScrollArea>
                     </TabsContent>
                 </Tabs>
             </div>

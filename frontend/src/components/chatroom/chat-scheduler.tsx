@@ -22,7 +22,7 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                     'Authorization': `Bearer ${accessToken}`
                 }
             });
-        }, 3000);
+        }, 10000);
         return () => clearInterval(interval);
     }, [execute]);
 

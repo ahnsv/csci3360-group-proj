@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from 'react';
 import ChatArea from './chat-area';
 import { useGetTasks } from "@/app/_api/auth";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
@@ -33,16 +34,38 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
         if (error) return <div>Error: {error.message}</div>;
 
         if (!tasks) return <div className="text-gray-500 text-center py-4">No tasks found</div>;
+
+        const Participants = (participants: string[]) => {
+            return participants.map((participant) => (
+                <Avatar 
+                    key={participant}
+                    className="h-8 w-8 border-2 border-white transition-transform duration-300 ease-in-out"
+                    title={participant}
+                >
+                    <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(participant)}`} alt={participant} />
+                    <AvatarFallback>{participant[0]}</AvatarFallback>
+                </Avatar>
+            ));
+        }
         return (
             <ScrollArea className="h-[calc(100vh-120px)]">
                 {tasks?.map((task) => (
                     <Card key={task.id} className="mb-4">
                         <CardContent className="p-4">
-                            <h3 className="font-semibold">{task.name}</h3>
-                            <p className="text-sm text-gray-500">{task.description}</p>
-                            <p className="text-sm text-gray-500">{task.due_at}</p>
-                            <p className="text-sm text-gray-500">{task.link}</p>
-                            <p className="text-sm text-gray-500">{task.type}</p>
+                            <div className="flex justify-between">
+                                <div>
+                                    <h3 className="font-semibold">{task.name}</h3>
+                                    <p className="text-sm text-gray-500">{task.description}</p>
+                                    <p className="text-sm text-gray-500">{task.due_at}</p>
+                                    <p className="text-sm text-gray-500">{task.link}</p>
+                                    <p className="text-sm text-gray-500">{task.type}</p>
+                                </div>
+                                <div className="group relative">
+                                    <div className="flex -space-x-3 transition-all duration-300 group-hover:space-x-1">
+                                        {Participants(['John Doe', 'Jane Doe', 'John Smith', 'Jane Smith'])}
+                                    </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 ))}

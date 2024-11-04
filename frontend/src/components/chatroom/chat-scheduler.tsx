@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import ChatArea from './chat-area';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../ui/resizable";
 
 export default function ChatScheduler({accessToken}: {accessToken: string}) {
     const [date, setDate] = React.useState<Date | undefined>(new Date())
@@ -77,13 +78,12 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
     }
 
     return (
-        <div className="flex h-full bg-gray-100 text-sm tracking-tight">
-            <div className="w-1/2">
+        <ResizablePanelGroup direction="horizontal" className="flex h-full bg-gray-100 text-sm tracking-tight">
+            <ResizablePanel className="w-1/2">
                 <ChatArea accessToken={accessToken} />
-            </div>
-            
-            {/* Schedule View */}
-            <div className="w-1/2 p-4 bg-white">
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel className="w-1/2 p-4 bg-white hidden md:block">
                 <Tabs defaultValue="list" className="flex flex-col items-center">
                     <TabsList className="mb-4">
                         <TabsTrigger value="list">List View</TabsTrigger>
@@ -145,7 +145,7 @@ export default function ChatScheduler({accessToken}: {accessToken: string}) {
                         </ScrollArea>
                     </TabsContent>
                 </Tabs>
-            </div>
-        </div>
+            </ResizablePanel>
+        </ResizablePanelGroup>
     )
 }

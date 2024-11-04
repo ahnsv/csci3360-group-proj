@@ -32,7 +32,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",
     "react-markdown": "^9.0.1",
-    "react-resizable-panels": "^2.1.4",
+    "react-resizable-panels": "^2.1.6",
     "tailwind-merge": "^2.5.3",
     "tailwindcss-animate": "^1.0.7"
   },

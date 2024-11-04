@@ -28,12 +28,22 @@ function ScrollToBottomButton({ onClick }: { onClick: () => void }) {
         <Button
             variant="secondary"
             size="icon"
-            className="absolute bottom-20 right-4 rounded-full shadow-lg"
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full shadow-lg transition-opacity duration-500"
             onClick={onClick}
             aria-label="Scroll to bottom"
             id="scroll-to-bottom-button"
+            style={{
+                opacity: 1,
+                animation: 'fade 500ms ease-in-out'
+            }}
         >
             <ChevronDown className="h-4 w-4" />
+            <style jsx>{`
+                @keyframes fade {
+                    0% { opacity: 0; }
+                    100% { opacity: 1; }
+                }
+            `}</style>
         </Button>
     )
 }
@@ -45,6 +55,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [showScrollButton, setShowScrollButton] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const viewportRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         getChatMessages(accessToken).then(setChatMessages);
@@ -53,6 +64,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
+        scrollToBottom();
         setChatMessages((prev) => [...prev, {
             author: 'user',
             message: inputMessage,
@@ -60,22 +72,28 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
         }]);
         chatWithScheduler(inputMessage, accessToken).then((msg) => {
             setChatMessages((prev) => [...prev, msg]);
-        }).finally(() => {
+        })
+        .catch(() => {
+            setChatMessages((prev) => [...prev, {
+                author: 'user',
+                message: 'Sorry, I\'m having trouble processing your message. Please try again later.',
+                sent_at: new Date(),
+            }]);
+        })
+        .finally(() => {
             setIsLoading(false);
         });
         setInputMessage('');
     };
 
-    const handleScroll = () => {
-        if (scrollAreaRef.current) {
-            const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
-            setShowScrollButton(scrollTop + clientHeight < scrollHeight);
-        }
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target as HTMLDivElement;
+        setShowScrollButton(scrollTop + clientHeight < scrollHeight - 20);
     };
 
     const scrollToBottom = () => {
         if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+            scrollAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
     };
 
@@ -83,23 +101,25 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
         <div className="flex flex-col h-full bg-white relative">
             <ScrollArea 
                 className="h-[calc(100vh-90px)] p-4"
-                ref={scrollAreaRef}
+                onScrollCapture={handleScroll}
             >
-                {chatMessages.map((msg, index) => (
-                    <ChatBubble key={index} message={msg} />
-                ))}
-                {isLoading && (
-                    <div className="flex items-start mb-4">
-                        <Avatar className="mr-2">
-                            <AvatarImage alt="AI"/>
-                            <AvatarFallback>AI</AvatarFallback>
-                        </Avatar>
-                        <div className="rounded-lg p-2 bg-gray-200 flex items-center">
-                            <Loader2 className="h-4 w-4 animate-spin text-gray-500 mr-2" />
-                            <span>Thinking...</span>
+                <div className="h-full" ref={scrollAreaRef}>
+                    {chatMessages.map((msg, index) => (
+                        <ChatBubble key={index} message={msg} />
+                    ))}
+                    {isLoading && (
+                        <div className="flex items-start mb-4">
+                            <Avatar className="mr-2">
+                                <AvatarImage alt="AI"/>
+                                <AvatarFallback>AI</AvatarFallback>
+                            </Avatar>
+                            <div className="rounded-lg p-2 bg-gray-200 flex items-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-gray-500 mr-2" />
+                                <span>Thinking...</span>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </ScrollArea>
             
             {showScrollButton && <ScrollToBottomButton onClick={scrollToBottom} />}

@@ -67,8 +67,8 @@ async def chat(
         user_id=current_user.id,
         author="agent",
         content=output.message,
-        created_at=datetime.fromisoformat(output.sent_at),
-        updated_at=datetime.fromisoformat(output.sent_at),
+        created_at=datetime.now(),  # TODO: ensure output.sent_at is up to date with the latest time
+        updated_at=datetime.now(),  
     )
     session.add(agent_message)
     await session.commit()

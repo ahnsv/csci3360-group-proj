@@ -27,12 +27,8 @@ async def aclient():
 def client():
     return OpenAI(api_key=settings.openai_api_key)
 
-inmemory_chat_history = [
-    {
-        "role": "system",
-        "content": "You are a helpful assistant that can help with scheduling tasks."
-    }
-]
+# Dictionary to store chat history for each user
+user_chat_histories = {}
 
 class ScheduleAgentChatOutput(BaseModel):
     message: str
@@ -40,6 +36,15 @@ class ScheduleAgentChatOutput(BaseModel):
     sent_at: str = Field(default_factory=lambda: datetime.now().isoformat(), description="ISO 8601 formatted datetime string")
 
 async def chat_with_schedule_agent(client: OpenAI, message: str, container: Container, user_id: str) -> ScheduleAgentChatOutput:
+    # Initialize chat history for new users
+    if user_id not in user_chat_histories:
+        user_chat_histories[user_id] = [
+            {
+                "role": "system",
+                "content": "You are a helpful assistant that can help with scheduling tasks."
+            }
+        ]
+    
     functions_to_call = {
         "get_study_progress": partial(get_study_progress, session=container.db_session, user_id=user_id),
         "sync_to_google_calendar": partial(sync_to_google_calendar, session=container.db_session, user_id=user_id),
@@ -50,10 +55,10 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
         "get_task": partial(get_task, session=container.db_session, user_id=user_id),
     }
     # TODO: add chat history from database
-    inmemory_chat_history.append({"role": "user", "content": message})
+    user_chat_histories[user_id].append({"role": "user", "content": message})
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=inmemory_chat_history,
+        messages=user_chat_histories[user_id],
         tools=list([function_to_schema(f) for f in functions_to_call.values()]),
         tool_choice="auto",
     )
@@ -62,7 +67,7 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
 
     # if not function call
     if not response.choices[0].message.tool_calls:  # Changed condition
-        inmemory_chat_history.append({
+        user_chat_histories[user_id].append({
             "role": "assistant",
             "content": response.choices[0].message.content,
         })
@@ -82,8 +87,8 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
         function_call_result = {"error": error_message}
         raise
 
-    inmemory_chat_history.append(response.choices[0].message)
-    inmemory_chat_history.append({
+    user_chat_histories[user_id].append(response.choices[0].message)
+    user_chat_histories[user_id].append({
         "role": "tool",
         "content": json.dumps(function_call_result),
         "tool_call_id": function_call.id,
@@ -91,11 +96,11 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
 
     second_response = client.beta.chat.completions.parse(
         model="gpt-4o-mini",
-        messages=inmemory_chat_history,
+        messages=user_chat_histories[user_id],
         temperature=0.0,
         response_format=ScheduleAgentChatOutput,
     )
-    inmemory_chat_history.append(
+    user_chat_histories[user_id].append(
         {
             'role': 'assistant',
             'content': second_response.choices[0].message.content,
@@ -103,7 +108,6 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
     )
 
     return second_response.choices[0].message.parsed
-
 
 
 OpenAIAClient = Annotated[AsyncOpenAI, Depends(aclient)]

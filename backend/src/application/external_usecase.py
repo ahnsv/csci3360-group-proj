@@ -1,6 +1,7 @@
 from typing import Any  # noqa
 
 from canvasapi import Canvas
+from fastapi import HTTPException
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
@@ -86,6 +87,8 @@ def fetch_canvas_events(
     url = f"{canvas_api_url}/api/v1/planner/items?start_date={start_date}&end_date={end_date}"
     headers = {"Authorization": f"Bearer {canvas_api_key}"}
     response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise RuntimeError(f"Failed to fetch Canvas planner items: {response.text}")
     planner_items = response.json()
     assignments = []
     quizzes = []

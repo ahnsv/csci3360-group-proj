@@ -75,7 +75,12 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
     function_name = function_call.function.name
     function_args = json.loads(function_call.function.arguments)
     
-    function_call_result = await functions_to_call[function_name](**function_args)
+    try:
+        function_call_result = await functions_to_call[function_name](**function_args)
+    except Exception as e:
+        error_message = f"Error executing {function_name}: {str(e)}"
+        function_call_result = {"error": error_message}
+        
     inmemory_chat_history.append(response.choices[0].message)
     inmemory_chat_history.append({
         "role": "tool",

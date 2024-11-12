@@ -66,6 +66,10 @@ async def chat(
         raise HTTPException(
             status_code=400, detail={"scope": "openai", "message": e.message}
         )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail={"scope": "unknown", "message": str(e)}
+        )
     finally:
         await session.commit()
 

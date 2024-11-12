@@ -112,7 +112,7 @@ async def list_canvas_courses(
     )
 
 
-async def get_upcoming_tasks(
+async def get_upcoming_assignments_and_quizzes(
     session: AsyncSession,
     user_id: str,
     n_days: int = 7,

@@ -12,7 +12,7 @@ from src.application.usecase_v2 import (
     create_task_from_dict,
     get_study_progress,
     get_task,
-    get_upcoming_tasks,
+    get_upcoming_assignments_and_quizzes,
     list_canvas_courses,
     list_tasks,
     sync_to_google_calendar,
@@ -44,7 +44,7 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
         "get_study_progress": partial(get_study_progress, session=container.db_session, user_id=user_id),
         "sync_to_google_calendar": partial(sync_to_google_calendar, session=container.db_session, user_id=user_id),
         "list_canvas_courses": partial(list_canvas_courses, session=container.db_session, user_id=user_id),
-        "get_upcoming_tasks": partial(get_upcoming_tasks, session=container.db_session, user_id=user_id),
+        "get_upcoming_assignments_and_quizzes": partial(get_upcoming_assignments_and_quizzes, session=container.db_session, user_id=user_id),
         "create_task_from_dict": partial(create_task_from_dict, session=container.db_session, user_id=user_id),
         "list_tasks": partial(list_tasks, session=container.db_session, user_id=user_id),
         "get_task": partial(get_task, session=container.db_session, user_id=user_id),
@@ -80,7 +80,8 @@ async def chat_with_schedule_agent(client: OpenAI, message: str, container: Cont
     except Exception as e:
         error_message = f"Error executing {function_name}: {str(e)}"
         function_call_result = {"error": error_message}
-    
+        raise
+
     inmemory_chat_history.append(response.choices[0].message)
     inmemory_chat_history.append({
         "role": "tool",

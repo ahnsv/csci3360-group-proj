@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -19,7 +18,7 @@ from src.application.usecase_v2 import (
     list_tasks,
     sync_to_google_calendar,
 )
-from src.deps import ApplicationContainer, AsyncDBSession, CurrentUser
+from src.deps import ApplicationContainer, CurrentUser
 
 # Agent cache to store initialized agents
 _agent_cache: Dict[str, CompiledGraph] = {}
@@ -76,7 +75,7 @@ def create_tools(container: ApplicationContainer, user_id: str):
 def get_or_create_agent(container: ApplicationContainer, user_id: str) -> CompiledGraph:
     """Get an existing agent from cache or create a new one."""
     if user_id not in _agent_cache:
-        model = ChatOpenAI(model="gpt-4o-mini")
+        model = ChatOpenAI(model="gpt-4o-mini", api_key=container.settings.openai_api_key)
         tools = create_tools(container, user_id)
         memory = MemorySaver()
         _agent_cache[user_id] = create_react_agent(model, tools, checkpointer=memory)
@@ -116,8 +115,10 @@ async def chat_with_agent(
         
         response = await agent.ainvoke(
             {"messages": [HumanMessage(content=request.message)]}, 
-            config
+            config=config
         )
+
+        print(response)
         
         return AgentResponse(
             message=response.get("output", "No response"),

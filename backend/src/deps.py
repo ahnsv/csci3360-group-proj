@@ -103,6 +103,7 @@ class CanvasClient:
 # dependency injection container
 class Container:
     def __init__(self, settings: Settings):
+        self.settings = settings
         self.google_calendar_client = GoogleCalendarClient(settings)
         self.canvas_client = CanvasClient(settings=settings)
         async_session = async_sessionmaker(bind=engine)

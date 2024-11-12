@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { API_URL } from "./constants";
 export async function chatWithScheduler(message: string, accessToken: string) {
-    const response = await fetch(`${API_URL}/chat/`, {
+    const response = await fetch(`${API_URL}/agent/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

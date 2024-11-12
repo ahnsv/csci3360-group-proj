@@ -137,13 +137,24 @@ async def canvas_connect(request: CanvasConnectIn, container: ApplicationContain
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    integration = Integration(
-        type="canvas",
-        token=request.token,
-        expire_at=None,
-        user_id=current_user.id
+    stmt = select(Integration).where(
+        Integration.user_id == current_user.id,
+        Integration.type == "canvas"
     )
-    session.add(integration)
+    existing_integration = await session.execute(stmt)
+    existing_integration = existing_integration.scalar_one_or_none()
+
+    if existing_integration:
+        existing_integration.token = request.token
+        existing_integration.expire_at = None
+    else:
+        integration = Integration(
+            type="canvas",
+            token=request.token,
+            expire_at=None,
+            user_id=current_user.id
+        )
+        session.add(integration)
     await session.commit()
 
     return CanvasConnectOut(success=True, message="Connected to Canvas API")

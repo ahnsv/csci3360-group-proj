@@ -75,7 +75,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
         })
         .catch(() => {
             setChatMessages((prev) => [...prev, {
-                author: 'user',
+                author: 'agent',
                 message: 'Sorry, I\'m having trouble processing your message. Please try again later.',
                 sent_at: new Date(),
             }]);

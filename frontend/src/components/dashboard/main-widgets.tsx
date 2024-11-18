@@ -14,6 +14,14 @@ const getCourseInfo: (accessToken: string) => Promise<Course[]> = async (accessT
     });
     return response.json();
 }
+const getCourse: (accessToken: string, courseId: number) => Promise<Course> = async (accessToken: string, courseId: number) => {
+    const response = await fetch(`${API_URL}/courses/${courseId}`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        },
+    });
+    return response.json();
+}
 const getMaterials: (accessToken: string, courseId: number) => Promise<Material[]> = async (accessToken: string, courseId: number) => {
     const response = await fetch(`${API_URL}/courses/${courseId}/materials`, {
         headers: {
@@ -70,12 +78,13 @@ export default async function MainWidgets() {
     }
 
     const courses: (Course & {materials?: Material[]})[] = await getCourseInfo(session.access_token);
-    const courseMaterials: Record<number, Material[]> = {};
+    // const courseMaterials: Record<number, Material[]> = {};
+    const courseInfos: Record<number, Course> = {};
     const courseAssignmentsOrQuizzes: Record<number, AssignmentOrQuiz> = {};
 
     for (const course of courses) {
-        const materials = await getMaterials(session.access_token, course.id);
-        courseMaterials[course.id] = materials;
+        const courseInfo = await getCourse(session.access_token, course.id);
+        courseInfos[course.id] = courseInfo;
         const assignmentsOrQuizzes = await getAssignmentsOrQuizzes(session.access_token, course.id);
         courseAssignmentsOrQuizzes[course.id] = assignmentsOrQuizzes;
     }
@@ -85,7 +94,7 @@ export default async function MainWidgets() {
         <div className="flex space-x-4 pb-4">
           {courses.map((course) => (
             <div key={course.id} className="flex-none w-[400px]">
-              <CourseCard courseInfo={course} assignmentsOrQuizzes={courseAssignmentsOrQuizzes[course.id]} materials={courseMaterials[course.id] || []} />
+              <CourseCard courseInfo={courseInfos[course.id]} assignmentsOrQuizzes={courseAssignmentsOrQuizzes[course.id]} materials={courseInfos[course.id].materials || []} />
             </div>
           ))}
         </div>

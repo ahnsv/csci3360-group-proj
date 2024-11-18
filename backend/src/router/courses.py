@@ -1,5 +1,8 @@
 
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from src.application import usecase_v2
@@ -22,22 +25,64 @@ async def get_courses(db_session: AsyncDBSession, current_user: CurrentUser):
     courses = result.scalars().all()
     return courses
 
+class CourseMaterialOut(BaseModel):
+    id: int
+    url: str | None
+    type: str
+    title: str
+    updated_at: datetime
+    created_at: datetime
 
-@router.get("/{course_id}")
+class CourseOut(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    instructor: str | None
+    materials: list[CourseMaterialOut]
+
+@router.get("/{course_id}", response_model=CourseOut)
 async def get_course(
     db_session: AsyncDBSession, current_user: CurrentUser, course_id: int
 ):
-    stmt = select(Course).where(
-        Course.id == course_id,
-        Course.id.in_(
-            select(CourseMembership.course_id).where(
-                CourseMembership.user_id == current_user.id
-            )
-        ),
+    stmt = (
+        select(Course, CourseMaterial)
+        .join(CourseMaterial, Course.id == CourseMaterial.course_id, isouter=True)
+        .where(
+            Course.id == course_id,
+            Course.id.in_(
+                select(CourseMembership.course_id).where(
+                    CourseMembership.user_id == current_user.id
+                )
+            ),
+        )
+        .order_by(CourseMaterial.updated_at.desc())
     )
     result = await db_session.execute(stmt)
-    course = result.scalar_one_or_none()
-    return course
+    course_materials = result.all()
+    
+    if not course_materials:
+        return None
+        
+    course = course_materials[0].Course
+    course_dict = {
+        "id": course.id,
+        "name": course.name,
+        "description": course.description,
+        "instructor": course.instructor,
+        "materials": [
+            {
+                "id": row.CourseMaterial.id,
+                "url": row.CourseMaterial.url,
+                "type": row.CourseMaterial.type,
+                "title": row.CourseMaterial.name,
+                "updated_at": row.CourseMaterial.updated_at,
+                "created_at": row.CourseMaterial.created_at,
+            }
+            for row in course_materials
+            if row.CourseMaterial is not None
+        ]
+    }
+    return course_dict
 
 
 @router.get("/{course_id}/materials")

@@ -32,17 +32,6 @@ export default function Component({ courseInfo, assignmentsOrQuizzes, materials 
     alert(`Navigating to estimation page for: ${assignment.title}`)
   }
 
-  const getIcon = (type: Material['type']) => {
-    switch (type) {
-      case 'pdf':
-        return <FileText className="h-6 w-6 text-blue-500" />
-      case 'video':
-        return <Video className="h-6 w-6 text-red-500" />
-      case 'image':
-        return <ImageIcon className="h-6 w-6 text-green-500" />
-    }
-  }
-
   return (
     <Card className="w-full max-w-md mx-auto transition-all duration-300 hover:scale-105 hover:shadow-xl">
       <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">

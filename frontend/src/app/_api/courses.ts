@@ -1,3 +1,4 @@
+import { Material } from "@/components/ui/course-card";
 import { useApiCall } from "./auth";
 
 export type Course = {
@@ -12,6 +13,7 @@ export type Course = {
     canvas_id?: number;
     days?: string;
     time?: string;
+    materials?: Material[];
 }
 
 

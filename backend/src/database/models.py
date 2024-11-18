@@ -124,3 +124,14 @@ class CourseMaterial(Base):
 
     def __repr__(self):
         return f"<CourseMaterial(id={self.id}, course_id='{self.course_id}', type='{self.type}', name='{self.name}')>"
+
+class CourseMembership(Base):
+    __tablename__ = 'course_membership'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    course_id = Column(BigInteger, ForeignKey('course.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('profiles.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+
+    course = relationship("Course")

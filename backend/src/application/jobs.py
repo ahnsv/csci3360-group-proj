@@ -2,7 +2,7 @@ from canvasapi import Canvas
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 
-from src.database.models import Course, CourseMaterial, CourseMaterialType
+from src.database.models import Base, Course, CourseMaterial, CourseMaterialType, CourseMembership
 from src.deps import AsyncDBSession
 
 
@@ -70,9 +70,10 @@ def get_course_module_items(
 
 
 async def extract_course_content(
-    canvas_api_url: str, canvas_api_key: str, db_session: AsyncDBSession
+    canvas_api_url: str, canvas_api_key: str, db_session: AsyncDBSession, user_id: str
 ):
     course_list = get_course_list(canvas_api_url, canvas_api_key)
+
     for course in course_list:
         details = get_course_details(canvas_api_url, canvas_api_key, course.id)
         instructors = details.teachers[0]["display_name"]
@@ -97,8 +98,13 @@ async def extract_course_content(
         course = result.scalar_one_or_none()
         if not course:
             raise Exception("Course not found")
-
-        if not course.id:
+        
+        stmt = insert(CourseMembership).values(course_id=course.id, user_id=user_id)
+        stmt = stmt.on_conflict_do_nothing()
+        stmt = stmt.returning(CourseMembership)
+        result = await db_session.execute(stmt)
+        course_membership = result.scalar_one_or_none()
+        if not course_membership:
             continue
 
         course_materials = []
@@ -168,6 +174,7 @@ if __name__ == "__main__":
                 canvas_api_url=settings.canvas_api_url,
                 canvas_api_key=settings.canvas_api_token,
                 db_session=session,
+                user_id="",
             )
 
     asyncio.run(main())

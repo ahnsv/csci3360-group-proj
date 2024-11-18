@@ -67,7 +67,7 @@ def fetch_canvas_events_by_course(
 
 
 def fetch_canvas_events(
-    canvas_api_url: str, canvas_api_key: str, start_date: str, end_date: str
+    canvas_api_url: str, canvas_api_key: str, start_date: str, end_date: str, course_id: str = None
 ):
     """
     Fetches all assignments and exam schedules from user's Canvas.
@@ -84,7 +84,11 @@ def fetch_canvas_events(
     """
     import requests
 
-    url = f"{canvas_api_url}/api/v1/planner/items?start_date={start_date}&end_date={end_date}"
+    if course_id:
+        additional_params = f"&context_codes[]=course_{course_id}"
+    else:
+        additional_params = ""
+    url = f"{canvas_api_url}/api/v1/planner/items?start_date={start_date}&end_date={end_date}" + additional_params
     headers = {"Authorization": f"Bearer {canvas_api_key}"}
     response = requests.get(url, headers=headers)
     if response.status_code != 200:

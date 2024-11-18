@@ -26,9 +26,6 @@ export default async function Home() {
     }
 
     return (
-        <>
-            <MainWidgets />
-            {/* <ChatScheduler accessToken={session.access_token} /> */}
-        </>
+        <MainWidgets />
     );
 }

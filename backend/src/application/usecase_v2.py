@@ -118,6 +118,7 @@ async def get_upcoming_assignments_and_quizzes(
     n_days: int = 7,
     start_date: str = None,
     end_date: str = None,
+    course_id: str = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Retrieve upcoming Canvas assignments and quizzes.
 
@@ -150,6 +151,7 @@ async def get_upcoming_assignments_and_quizzes(
         canvas_api_key=canvas_token,
         start_date=start_date_dt.isoformat(),
         end_date=end_date_dt.isoformat(),
+        course_id=course_id,
     )
 
 

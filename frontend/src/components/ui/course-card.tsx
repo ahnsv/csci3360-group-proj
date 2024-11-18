@@ -1,40 +1,34 @@
 'use client';
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
-import { Button } from "@/components/ui/button"
-import { Calendar, Clock, User, BookOpen, AlertCircle, FileText, Video, ImageIcon } from 'lucide-react'
+import { Course } from '@/app/_api/courses';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { AlertCircle, Archive, BookOpen, Calendar, Clock, FileText, ImageIcon, Music, User, Video } from 'lucide-react';
+import Image from 'next/image';
+import { AssignmentOrQuiz } from '../dashboard/main-widgets';
 
-interface Assignment {
+export interface Material {
   id: number
-  title: string
-  dueDate: string
-  description: string
+  name: string
+  type: 'pdf' | 'video' | 'image' | 'doc' | 'ppt' | 'xls' | 'img' | 'audio' | 'zip' | 'other'
+  url: string
+//   thumbnail: string
+//   description: string
 }
 
-interface Material {
-  id: number
-  title: string
-  type: 'pdf' | 'video' | 'image'
-  thumbnail: string
-  description: string
+interface CourseCardProps {
+    courseInfo: Course;
+    assignmentsOrQuizzes: AssignmentOrQuiz;
+    materials: Material[];
 }
 
-export default function Component() {
-  const [assignments] = useState<Assignment[]>([
-    { id: 1, title: "Midterm Paper", dueDate: "2023-10-15", description: "5-page essay on quantum mechanics" },
-    { id: 2, title: "Problem Set 3", dueDate: "2023-10-22", description: "Exercises covering chapters 7-9" },
-    { id: 3, title: "Quiz 2", dueDate: "2023-10-29", description: "30-minute quiz on recent lectures" },
-  ])
+export default function Component({ courseInfo, assignmentsOrQuizzes, materials }: CourseCardProps) {
 
-  const [materials] = useState<Material[]>([
-    { id: 1, title: "Lecture Notes Week 1", type: 'pdf', thumbnail: "/placeholder.svg?height=80&width=60", description: "Introduction to Newtonian Mechanics" },
-    { id: 2, title: "Lab Demo Video", type: 'video', thumbnail: "/placeholder.svg?height=80&width=60", description: "Demonstration of pendulum experiment" },
-    { id: 3, title: "Diagram: Projectile Motion", type: 'image', thumbnail: "/placeholder.svg?height=80&width=60", description: "Visual representation of projectile motion concepts" },
-  ])
+    const assignments = assignmentsOrQuizzes?.assignments || [];
+    const quizzes = assignmentsOrQuizzes?.quizzes || [];
 
-  const handleAssignmentClick = (assignment: Assignment) => {
+  const handleAssignmentClick = (assignment: AssignmentOrQuiz['assignments'][0]) => {
     alert(`Navigating to estimation page for: ${assignment.title}`)
   }
 
@@ -52,16 +46,16 @@ export default function Component() {
   return (
     <Card className="w-full max-w-md mx-auto transition-all duration-300 hover:scale-105 hover:shadow-xl">
       <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-t-lg">
-        <CardTitle className="text-2xl font-bold">Introduction to Physics</CardTitle>
+        <CardTitle className="text-2xl font-bold">{courseInfo.name}</CardTitle>
         <div className="flex items-center mt-2">
           <User className="mr-2" size={18} />
-          <span>Dr. Jane Smith</span>
+          <span>{courseInfo.instructor}</span>
         </div>
         <div className="flex items-center mt-1">
           <Calendar className="mr-2" size={18} />
-          <span>MWF</span>
+          <span>{courseInfo.days || 'TBD'}</span>
           <Clock className="ml-4 mr-2" size={18} />
-          <span>10:00 AM</span>
+          <span>{courseInfo.time || 'TBD'}</span>
         </div>
       </CardHeader>
       <CardContent className="mt-4">
@@ -71,7 +65,7 @@ export default function Component() {
         </h3>
         <ul className="space-y-2 mb-4">
           {assignments.map((assignment) => (
-            <li key={assignment.id}>
+            <li key={assignment.title}>
               <HoverCard>
                 <HoverCardTrigger asChild>
                   <Button
@@ -86,8 +80,8 @@ export default function Component() {
                 <HoverCardContent className="w-80">
                   <div className="space-y-1">
                     <h4 className="text-sm font-semibold">{assignment.title}</h4>
-                    <p className="text-sm">Due: {assignment.dueDate}</p>
-                    <p className="text-sm text-muted-foreground">{assignment.description}</p>
+                    <p className="text-sm">Due: {assignment.due_at}</p>
+                    <p className="text-sm text-muted-foreground">{assignment.html_url}</p>
                   </div>
                 </HoverCardContent>
               </HoverCard>
@@ -99,28 +93,28 @@ export default function Component() {
           Course Materials
         </h3>
         <ul className="grid grid-cols-3 gap-2">
-          {materials.map((material) => (
+          {Array.isArray(materials) && materials.map((material) => (
             <li key={material.id} className="relative group">
               <div className="aspect-w-3 aspect-h-4">
-                <img
-                  src={material.thumbnail}
-                  alt={material.title}
-                  className="object-cover rounded-md"
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  {getIcon(material.type)}
-                </div>
+                  {material.type === 'pdf' && <FileText className="w-8 h-8 text-red-500" />}
+                  {material.type === 'doc' && <FileText className="w-8 h-8 text-blue-500" />}
+                  {material.type === 'ppt' && <FileText className="w-8 h-8 text-orange-500" />}
+                  {material.type === 'xls' && <FileText className="w-8 h-8 text-green-500" />}
+                  {/* {material.type === 'img' && <Image className="w-8 h-8 text-purple-500" />} */}
+                  {material.type === 'video' && <Video className="w-8 h-8 text-pink-500" />}
+                  {material.type === 'audio' && <Music className="w-8 h-8 text-indigo-500" />}
+                  {material.type === 'zip' && <Archive className="w-8 h-8 text-gray-500" />}
+                  {/* {material.type === 'other' && <File className="w-8 h-8 text-gray-400" />} */}
               </div>
               <HoverCard>
                 <HoverCardTrigger asChild>
                   <Button variant="ghost" className="w-full h-full absolute inset-0 p-0">
-                    <span className="sr-only">{material.title}</span>
+                    <span className="sr-only">{material.name}</span>
                   </Button>
                 </HoverCardTrigger>
                 <HoverCardContent className="w-80">
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">{material.title}</h4>
-                    <p className="text-sm text-muted-foreground">{material.description}</p>
+                    <h4 className="text-sm font-semibold">{material.name}</h4>
                   </div>
                 </HoverCardContent>
               </HoverCard>

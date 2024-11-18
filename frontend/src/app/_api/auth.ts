@@ -17,7 +17,7 @@ interface ApiResponse<T> {
   execute: (options?: ApiCallOptions) => Promise<T>;
 }
 
-const useApiCall = <T>(endpoint: string): ApiResponse<T> => {
+export const useApiCall = <T>(endpoint: string): ApiResponse<T> => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [data, setData] = useState<T | null>(null);

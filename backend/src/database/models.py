@@ -2,10 +2,12 @@ import enum
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     Column,
     DateTime,
     Enum,
     ForeignKey,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -141,6 +143,7 @@ class Course(Base):
     instructor = Column(String, nullable=True)
     code = Column(String, nullable=True)
     canvas_id = Column(BigInteger, nullable=True)
+    hidden = Column(Boolean, nullable=False, default=False)
 
     # user_id = Column(UUID(as_uuid=True), ForeignKey('profiles.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
 

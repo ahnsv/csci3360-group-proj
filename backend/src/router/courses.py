@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import not_, select
 
 from src.application import usecase_v2
 from src.database.models import Course, CourseMaterial, CourseMembership
@@ -15,6 +15,7 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 @router.get("/")
 async def get_courses(db_session: AsyncDBSession, current_user: CurrentUser):
     stmt = select(Course).where(
+        Course.hidden is not True,
         Course.id.in_(
             select(CourseMembership.course_id).where(
                 CourseMembership.user_id == current_user.id
@@ -48,6 +49,7 @@ async def get_course(
         select(Course, CourseMaterial)
         .join(CourseMaterial, Course.id == CourseMaterial.course_id, isouter=True)
         .where(
+            Course.hidden is not True,
             Course.id == course_id,
             Course.id.in_(
                 select(CourseMembership.course_id).where(

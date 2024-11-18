@@ -117,8 +117,6 @@ async def chat_with_agent(
             {"messages": [HumanMessage(content=request.message)]}, 
             config=config
         )
-
-        print(response)
         
         return AgentResponse(
             message=response.get("output", "No response"),

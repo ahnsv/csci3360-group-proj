@@ -2,7 +2,12 @@ from canvasapi import Canvas
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert
 
-from src.database.models import Base, Course, CourseMaterial, CourseMaterialType, CourseMembership
+from src.database.models import (
+    Course,
+    CourseMaterial,
+    CourseMaterialType,
+    CourseMembership,
+)
 from src.deps import AsyncDBSession
 
 

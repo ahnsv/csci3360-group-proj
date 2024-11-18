@@ -1,11 +1,9 @@
-from typing import Any  # noqa
-
 from canvasapi import Canvas
-from fastapi import HTTPException
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
+
 from src.settings import settings
+
 
 def fetch_canvas_courses(canvas_api_url: str, canvas_api_key: str, **kwargs):
     """
@@ -33,7 +31,6 @@ def fetch_canvas_courses(canvas_api_url: str, canvas_api_key: str, **kwargs):
         }
         for course in courses
     ]
-
 
 
 def fetch_canvas_events_by_course(
@@ -67,7 +64,11 @@ def fetch_canvas_events_by_course(
 
 
 def fetch_canvas_events(
-    canvas_api_url: str, canvas_api_key: str, start_date: str, end_date: str, course_id: str = None
+    canvas_api_url: str,
+    canvas_api_key: str,
+    start_date: str,
+    end_date: str,
+    course_id: str = None,
 ):
     """
     Fetches all assignments and exam schedules from user's Canvas.
@@ -88,7 +89,10 @@ def fetch_canvas_events(
         additional_params = f"&context_codes[]=course_{course_id}"
     else:
         additional_params = ""
-    url = f"{canvas_api_url}/api/v1/planner/items?start_date={start_date}&end_date={end_date}" + additional_params
+    url = (
+        f"{canvas_api_url}/api/v1/planner/items?start_date={start_date}&end_date={end_date}"
+        + additional_params
+    )
     headers = {"Authorization": f"Bearer {canvas_api_key}"}
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
@@ -122,6 +126,7 @@ def fetch_canvas_events(
             print(f"Unknown plannable type: {item['plannable_type']}")
     return {"assignments": assignments, "quizzes": quizzes}
 
+
 def fetch_canvas_modules_or_files(
     canvas_api_url: str, canvas_api_key: str, course_id: str, **kwargs
 ):
@@ -143,7 +148,9 @@ def fetch_canvas_modules_or_files(
     files = course.get_files(course_id=course_id, **kwargs)
     if not files:
         modules = course.get_modules(course_id=course_id, **kwargs)
-        module_items = course.get_module_items(module_id=modules[0].id, **kwargs) # TODO: handle multiple modules
+        module_items = course.get_module_items(
+            module_id=modules[0].id, **kwargs
+        )  # TODO: handle multiple modules
         return module_items
     else:
         return files
@@ -194,8 +201,14 @@ def add_study_schedule_to_google_calendar(
     event = {
         "summary": title,
         "description": description,
-        "start": {"dateTime": start_time, "timeZone": "America/New_York"}, # TODO: change to user's timezone
-        "end": {"dateTime": end_time, "timeZone": "America/New_York"}, # TODO: change to user's timezone
+        "start": {
+            "dateTime": start_time,
+            "timeZone": "America/New_York",
+        },  # TODO: change to user's timezone
+        "end": {
+            "dateTime": end_time,
+            "timeZone": "America/New_York",
+        },  # TODO: change to user's timezone
     }
     created_event = (
         service.events().insert(calendarId=calendar_id, body=event).execute()
@@ -206,6 +219,7 @@ def add_study_schedule_to_google_calendar(
         "start": created_event["start"],
         "end": created_event["end"],
     }
+
 
 def list_google_calendar_events(
     google_credentials: Credentials,
@@ -227,11 +241,12 @@ def list_google_calendar_events(
     Returns:
     - events: List of events
     """
-    if not kwargs:  
+    if not kwargs:
         kwargs = {"timeMin": start_date, "timeMax": end_date}
     service = build("calendar", "v3", credentials=google_credentials)
     events = service.events().list(calendarId=calendar_id, **kwargs).execute()
     return events
+
 
 def get_google_calendar_event(
     google_credentials: Credentials,
@@ -240,8 +255,12 @@ def get_google_calendar_event(
     **kwargs,
 ):
     service = build("calendar", "v3", credentials=google_credentials)
-    event = service.events().get(calendarId=calendar_id, eventId=event_id, **kwargs).execute()
-    return event    
+    event = (
+        service.events()
+        .get(calendarId=calendar_id, eventId=event_id, **kwargs)
+        .execute()
+    )
+    return event
 
 
 def set_event_reminder(
@@ -308,4 +327,3 @@ def fetch_study_progress(
             }
         )
     return progress
-

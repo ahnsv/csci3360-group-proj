@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import BigInteger, Column, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import BigInteger, Column, DateTime, Enum, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -79,3 +79,48 @@ class Task(Base):
 
     def __repr__(self):
         return f"<Task(id={self.id}, name='{self.name}', user_id='{self.user_id}', type='{self.type}')>"
+
+class Course(Base):
+    __tablename__ = 'course'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    name = Column(String, nullable=False, unique=True)
+    description = Column(String, nullable=True)
+    link = Column(String, nullable=True)
+    instructor = Column(String, nullable=True)
+    code = Column(String, nullable=True)
+    canvas_id = Column(BigInteger, nullable=True)
+
+    # user_id = Column(UUID(as_uuid=True), ForeignKey('profiles.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+
+    # profile = relationship("Profiles")
+
+    def __repr__(self):
+        return f"<Course(id={self.id}, name='{self.name}', instructor='{self.instructor}')>"
+
+class CourseMaterialType(enum.Enum):
+    PDF = "PDF"
+    IMAGE = "IMAGE"
+    URL = "URL"
+
+class CourseMaterial(Base):
+    __tablename__ = 'course_material'
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    course_id = Column(BigInteger, ForeignKey('course.id', onupdate='CASCADE', ondelete='CASCADE'), nullable=False)
+    type = Column(Enum(CourseMaterialType, name="COURSE_MATERIAL_TYPE"), nullable=False)
+    url = Column(String, nullable=True)
+    name = Column(String, nullable=True)
+    canvas_id = Column(String, nullable=True)
+
+    course = relationship("Course")
+
+    # add unique constraint on course_id and name
+    __table_args__ = (UniqueConstraint('name', 'course_id', name='unique_name_course_id'),)
+
+    def __repr__(self):
+        return f"<CourseMaterial(id={self.id}, course_id='{self.course_id}', type='{self.type}', name='{self.name}')>"

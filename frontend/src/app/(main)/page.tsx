@@ -2,6 +2,7 @@ import ChatScheduler from "@/components/chatroom/chat-scheduler";
 import {redirect} from "next/navigation";
 import {createServerSupabaseClient} from "@/lib/supabase/server";
 import { checkRequiredIntegrations } from "../_api/chat";
+import MainWidgets from "@/components/dashboard/main-widgets";
 
 export default async function Home() {
     const supabase = createServerSupabaseClient()
@@ -25,6 +26,9 @@ export default async function Home() {
     }
 
     return (
-        <ChatScheduler accessToken={session.access_token} />
+        <>
+            <MainWidgets />
+            {/* <ChatScheduler accessToken={session.access_token} /> */}
+        </>
     );
 }

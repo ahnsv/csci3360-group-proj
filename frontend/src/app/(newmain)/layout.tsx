@@ -13,12 +13,54 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+const navMain = [
+    {
+        title: "Dashboard",
+        url: "/dashboard",
+    },
+    {
+        title: "Chat",
+        url: "/chat",
+    },
+    {
+        title: "Settings",
+        url: "/settings",
+    },
+]
 
 
-export default function Layout({children}: {children: React.ReactNode}) {
+export default async function Layout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: { segments: string[] };
+}) {
+    const supabase = createServerSupabaseClient();
+    const { data: {user} } = await supabase.auth.getUser();
+    if (!user) {
+        redirect("/login");
+    }
+
+    // Get current path segments from headers
+    const pathSegments = headers().get("x-pathname")?.split('/')
+      .filter(Boolean)
+      .map(segment => ({
+        title: segment.charAt(0).toUpperCase() + segment.slice(1),
+        href: '/' + segment
+      })) ?? [];
+
     return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={{
+        name: user.user_metadata.name ?? user.email ?? "",
+        email: user.email ?? "",
+        avatar: user.user_metadata.avatar_url ?? "",
+      }} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2">
           <div className="flex items-center gap-2 px-4">
@@ -26,27 +68,25 @@ export default function Layout({children}: {children: React.ReactNode}) {
             <Separator orientation="vertical" className="mr-2 h-4" />
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Dashboard
-                  </BreadcrumbLink>
+                <BreadcrumbItem>
+                  <BreadcrumbLink href="/">Home</BreadcrumbLink>
                 </BreadcrumbItem>
-                {/* <BreadcrumbSeparator className="hidden md:block" /> */}
-                {/* <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem> */}
+                {pathSegments.map((segment, index) => (
+                  <BreadcrumbItem key={segment.href}>
+                    <BreadcrumbSeparator />
+                    {index === pathSegments.length - 1 ? (
+                      <BreadcrumbPage>{segment.title}</BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink href={segment.href}>
+                        {segment.title}
+                      </BreadcrumbLink>
+                    )}
+                  </BreadcrumbItem>
+                ))}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
-        {/* <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-            <div className="aspect-video rounded-xl bg-muted/50" />
-          </div>
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
-        </div> */}
         {children}
       </SidebarInset>
     </SidebarProvider>

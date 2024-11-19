@@ -23,6 +23,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { createSupabaseClient } from "@/lib/supabase/client"
 
 const data = {
   user: {
@@ -72,7 +73,7 @@ const data = {
     },
     {
       title: "Chat",
-      url: "#",
+      url: "/chat",
       icon: MessageCircle,
       items: [
         {
@@ -118,16 +119,16 @@ const data = {
     },
   ],
   navSecondary: [
-    {
-      title: "Support",
-      url: "#",
-      icon: LifeBuoy,
-    },
-    {
-      title: "Feedback",
-      url: "#",
-      icon: Send,
-    },
+    // {
+    //   title: "Support",
+    //   url: "#",
+    //   icon: LifeBuoy,
+    // },
+    // {
+    //   title: "Feedback",
+    //   url: "#",
+    //   icon: Send,
+    // },
   ],
   projects: [
     // {
@@ -148,7 +149,15 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -170,11 +179,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   )

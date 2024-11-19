@@ -43,7 +43,7 @@ export default async function Layout({
     const supabase = createServerSupabaseClient();
     const { data: {user} } = await supabase.auth.getUser();
     if (!user) {
-        redirect("/login");
+        redirect("/signin");
     }
 
     // Get current path segments from headers

@@ -20,6 +20,8 @@ asyncpg = "^0.30.0"
 supabase-auth = "^2.9.3"
 canvasapi = "^3.3.0"
 langchain-core = "^0.3.19"
+langchain-openai = "^0.2.9"
+langgraph = "^0.2.52"
 
 
 [tool.poetry.group.dev.dependencies]

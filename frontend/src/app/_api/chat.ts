@@ -84,3 +84,27 @@ export const getChatMessages = async (accessToken: string) => {
     }));
 }
 
+export const talkToAgent = async (accessToken: string, message: string) => {
+    const response = await fetch(`${API_URL}/agent/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+            message: message,
+        }),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to talk to agent');
+    }
+
+    const data = await response.json();
+    return {
+        author: 'agent',
+        message: data.message,
+        toolInvocations: data.tool_invocations,
+        sent_at: new Date(),
+    };
+}

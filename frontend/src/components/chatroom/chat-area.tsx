@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Send, Loader2, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import ReactMarkdown from 'react-markdown'
-import { chatWithScheduler, getChatMessages } from '@/app/_api/chat'
+import { chatWithScheduler, getChatMessages, talkToAgent } from '@/app/_api/chat'
 import ChatBubble from "./chat-bubble"
+import AssignmentQuizCard from "./assignment-quiz-card"
 
 type ChatAction = {
     name: string
@@ -16,11 +17,18 @@ type ChatAction = {
     type: "button" | "link"
 }
 
+type ToolInvocation = {
+    name: string
+    result: Record<string, any>
+    state: "result" | "failure"
+}
+
 type ChatMessage = {
     author: string
     message: string
     sent_at: Date
     actions?: ChatAction[]
+    toolInvocations?: any[]
 }
 
 function ScrollToBottomButton({ onClick }: { onClick: () => void }) {
@@ -70,7 +78,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
             message: inputMessage,
             sent_at: new Date(),
         }]);
-        chatWithScheduler(inputMessage, accessToken).then((msg) => {
+        talkToAgent(accessToken, inputMessage).then((msg) => {
             setChatMessages((prev) => [...prev, msg]);
         })
         .catch(() => {
@@ -104,9 +112,21 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                 onScrollCapture={handleScroll}
             >
                 <div className="h-full" ref={scrollAreaRef}>
-                    {chatMessages.map((msg, index) => (
-                        <ChatBubble key={index} message={msg} />
-                    ))}
+                    {chatMessages.map((msg, index) => {
+                        const hasAssignmentTool = msg.toolInvocations?.some(
+                            tool => tool.name === "get_upcoming_assignments_and_quizzes_tool" && 
+                            tool.state === "result"
+                        );
+
+                        if (hasAssignmentTool && msg.toolInvocations) {
+                            const assignments = msg.toolInvocations.find(
+                                tool => tool.name === "get_upcoming_assignments_and_quizzes_tool"
+                            )?.result?.assignments;
+                            return <AssignmentQuizCard key={index} assignments={assignments} />;
+                        }
+
+                        return <ChatBubble key={index} message={msg} />;
+                    })}
                     {isLoading && (
                         <div className="flex items-start mb-4">
                             <Avatar className="mr-2">

@@ -6,7 +6,7 @@ import { Button } from "../ui/button"
 import TaskEstimationForm from "./forms/task-estimation-form"
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog"
 
-interface Assignment {
+export interface Assignment {
   title: string
   due_at: string
   course_name: string
@@ -14,9 +14,15 @@ interface Assignment {
   html_url: string
 }
 
+export interface Quiz {
+  id: number
+  title: string
+  html_url: string
+}
+
 interface AssignmentDisplayProps {
   assignments?: Assignment[]
-  quizzes?: any[] // Assuming quizzes might be added later
+  quizzes?: Quiz[] // Assuming quizzes might be added later
 }
 
 export default function Component({ assignments = [], quizzes = [] }: AssignmentDisplayProps) {

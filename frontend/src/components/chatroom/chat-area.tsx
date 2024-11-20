@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import ReactMarkdown from 'react-markdown'
 import { chatWithScheduler, getChatMessages, talkToAgent } from '@/app/_api/chat'
 import ChatBubble from "./chat-bubble"
-import AssignmentQuizCard from "./assignment-quiz-card"
+import AssignmentQuizCard, { Assignment } from "./assignment-quiz-card"
 
 type ChatAction = {
     name: string
@@ -19,7 +19,7 @@ type ChatAction = {
 
 type ToolInvocation = {
     name: string
-    result: Record<string, any>
+    result: Record<string, unknown>
     state: "result" | "failure"
 }
 
@@ -28,7 +28,7 @@ type ChatMessage = {
     message: string
     sent_at: Date
     actions?: ChatAction[]
-    toolInvocations?: any[]
+    toolInvocations?: ToolInvocation[]
 }
 
 function ScrollToBottomButton({ onClick }: { onClick: () => void }) {
@@ -122,7 +122,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                             const assignments = msg.toolInvocations.find(
                                 tool => tool.name === "get_upcoming_assignments_and_quizzes_tool"
                             )?.result?.assignments;
-                            return <AssignmentQuizCard key={index} assignments={assignments} />;
+                            return <AssignmentQuizCard key={index} assignments={assignments as Assignment[]} />;
                         }
 
                         return <ChatBubble key={index} message={msg} />;

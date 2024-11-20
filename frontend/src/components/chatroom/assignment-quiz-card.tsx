@@ -2,6 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Book, ExternalLink, Clock } from 'lucide-react'
 import { format } from "date-fns"
+import { Button } from "../ui/button"
+import TaskEstimationForm from "./forms/task-estimation-form"
+import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog"
 
 interface Assignment {
   title: string
@@ -55,7 +58,8 @@ export default function Component({ assignments = [], quizzes = [] }: Assignment
               <Badge variant="secondary" className="text-xs">
                 Assignment ID: {getAssignmentId(assignment.html_url)}
               </Badge>
-              <a
+              <div className="flex items-center space-x-2">
+                <a
                 href={assignment.html_url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -64,6 +68,18 @@ export default function Component({ assignments = [], quizzes = [] }: Assignment
                 View Assignment
                 <ExternalLink className="w-4 h-4 ml-1" />
               </a>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Estimate
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <TaskEstimationForm taskName={assignment.title} taskContext={assignment.course_name} />
+                </DialogContent>
+                </Dialog>
+              </div>
             </div>
           </div>
         ))}

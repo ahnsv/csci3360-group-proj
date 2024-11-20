@@ -9,6 +9,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import Resource, build
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from supabase_auth import AsyncGoTrueClient, User
+from supabase_auth.errors import AuthApiError
 
 from src.settings import Settings, settings
 
@@ -103,6 +104,7 @@ class CanvasClient:
 # dependency injection container
 class Container:
     def __init__(self, settings: Settings):
+        self.settings = settings
         self.google_calendar_client = GoogleCalendarClient(settings)
         self.canvas_client = CanvasClient(settings=settings)
         async_session = async_sessionmaker(bind=engine)
@@ -149,7 +151,13 @@ async def get_current_user(access_token: AccessTokenDep) -> User:
     if not access_token:
         raise HTTPException(status_code=401, detail="Access token not found")
 
-    user_rsp = await gotrue_client.get_user(jwt=access_token)
+    try:
+        user_rsp = await gotrue_client.get_user(jwt=access_token)
+    except AuthApiError:
+        raise HTTPException(status_code=401, detail="Invalid access token")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        
     if not user_rsp:
         # logging.error("User not found")
         raise HTTPException(status_code=404, detail="User not found")

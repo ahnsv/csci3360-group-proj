@@ -55,7 +55,7 @@ export default async function Layout({
       })) ?? [];
 
     return (
-    <SidebarProvider>
+    <SidebarProvider open={false}>
       <AppSidebar user={{
         name: user.user_metadata.name ?? user.email ?? "",
         email: user.email ?? "",

@@ -173,23 +173,17 @@ export default function Component({ courseInfo }: CourseCardProps) {
           Course Materials
         </h3>
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-6 gap-2">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="aspect-w-3 aspect-h-4 bg-gray-200 animate-pulse rounded-md" />
             ))}
           </div>
         ) : (
-          <ul className="grid grid-cols-3 gap-2">
+          <ul className="grid grid-cols-6 gap-2">
             {Array.isArray(courseMaterials) && courseMaterials.map((material) => (
               <li key={material.id} className="relative group">
-                <div className="aspect-w-3 aspect-h-4">
-                  {material.type === 'pdf' && <FileText className="w-8 h-8 text-red-500" />}
-                  {material.type === 'doc' && <FileText className="w-8 h-8 text-blue-500" />}
-                  {material.type === 'ppt' && <FileText className="w-8 h-8 text-orange-500" />}
-                  {material.type === 'xls' && <FileText className="w-8 h-8 text-green-500" />}
-                  {material.type === 'video' && <Video className="w-8 h-8 text-pink-500" />}
-                  {material.type === 'audio' && <Music className="w-8 h-8 text-indigo-500" />}
-                  {material.type === 'zip' && <Archive className="w-8 h-8 text-gray-500" />}
+                <div className="aspect-w-3 aspect-h-4 flex items-center justify-center">
+                  <FileText className="w-8 h-8 text-red-500" />
                 </div>
                 <HoverCard>
                   <HoverCardTrigger asChild>

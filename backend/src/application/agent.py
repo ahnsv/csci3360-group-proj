@@ -164,4 +164,4 @@ async def chat_with_agent(
             detail={"message": f"Agent error: {str(e)}"}
         )
     finally:
-        db_session.commit()
+        await db_session.commit()

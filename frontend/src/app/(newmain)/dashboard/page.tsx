@@ -7,10 +7,31 @@ import { FileText } from "lucide-react";
 export default function Page() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+      <div className="grid auto-rows-min gap-4 grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 col-span-2">
+            <div className="flex flex-col items-center justify-center p-6 rounded-xl border hover:bg-slate-50 cursor-pointer">
+                <span className="text-3xl font-bold">45m</span>
+                <span className="text-sm text-muted-foreground">Avg. Task Time</span>
+                <span className="text-xs text-blue-600 mt-1">Plan your schedule better</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-6 rounded-xl border hover:bg-slate-50 cursor-pointer">
+                <span className="text-3xl font-bold text-green-600">2.5h</span>
+                <span className="text-sm text-muted-foreground">Time Saved Today</span>
+                <span className="text-xs text-green-600 mt-1">View productivity stats</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-6 rounded-xl border hover:bg-slate-50 cursor-pointer">
+                <span className="text-3xl font-bold text-yellow-600">3h</span>
+                <span className="text-sm text-muted-foreground">Est. Work Left</span>
+                <span className="text-xs text-yellow-600 mt-1">Click to prioritize</span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-6 rounded-xl border hover:bg-slate-50 cursor-pointer">
+                <span className="text-3xl font-bold text-red-600">30m</span>
+                <span className="text-sm text-muted-foreground">Urgent Task Time</span>
+                <span className="text-xs text-red-600 mt-1">Start now to finish on time</span>
+            </div>
+        </div>
         <TaskStackedBarChart />
         <TaskChart />
-        <div className="aspect-video rounded-xl bg-muted/50" />
       </div>
       <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" >
         <h3 className="text-lg font-semibold mb-2 flex items-center">

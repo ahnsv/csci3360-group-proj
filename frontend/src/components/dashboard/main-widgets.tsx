@@ -25,7 +25,7 @@ const getCourse: (accessToken: string, courseId: number) => Promise<Course> = as
     });
     return response.json();
 }
-const getMaterials: (accessToken: string, courseId: number) => Promise<Material[]> = async (accessToken: string, courseId: number) => {
+export const getMaterials: (accessToken: string, courseId: number) => Promise<Material[]> = async (accessToken: string, courseId: number) => {
     const response = await fetch(`${API_URL}/courses/${courseId}/materials`, {
         headers: {
             'Authorization': `Bearer ${accessToken}`
@@ -56,7 +56,7 @@ export type AssignmentOrQuiz = {
     quizzes: Quiz[];
 }
 
-const getAssignmentsOrQuizzes: (accessToken: string, courseId: number) => Promise<AssignmentOrQuiz> = async (accessToken: string, courseId: number) => {
+export const getAssignmentsOrQuizzes: (accessToken: string, courseId: number) => Promise<AssignmentOrQuiz> = async (accessToken: string, courseId: number) => {
     const response = await fetch(`${API_URL}/courses/${courseId}/assignments`, {
         headers: {
             'Authorization': `Bearer ${accessToken}`

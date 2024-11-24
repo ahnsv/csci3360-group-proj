@@ -8,8 +8,24 @@ import { Form, FormField } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form"
+import { createSupabaseClient } from "@/lib/supabase/client"
+import { useEffect, useState } from "react"
+
+async function getPrompts() {
+  const supabase = createSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase.from("preference").select("id, task_extraction_prompt, scheduling_prompt").eq("user_id", user?.id).single()
+  if (error) {
+    throw error
+  }
+  return data
+}
 
 function PromptForm() {
+  const supabase = createSupabaseClient()
+  const [preferenceId, setPreferenceId] = useState<string | undefined>(undefined)
+  const [loading, setLoading] = useState(true)
+
   const promptFormSchema = z.object({
     taskExtractionPrompt: z.string()
       .min(10, {
@@ -30,8 +46,8 @@ function PromptForm() {
   type PromptFormValues = z.infer<typeof promptFormSchema>
 
   const defaultValues: Partial<PromptFormValues> = {
-    taskExtractionPrompt: "Extract key tasks and deadlines from the following text:",
-    schedulingPrompt: "Based on these tasks and my calendar, recommend a schedule:"
+    taskExtractionPrompt: "",
+    schedulingPrompt: ""
   }
 
   const form = useForm<PromptFormValues>({
@@ -40,15 +56,51 @@ function PromptForm() {
     mode: "onChange",
   })
 
-  function onSubmit(data: PromptFormValues) {
+  useEffect(() => {
+    async function loadPrompts() {
+      try {
+        const data = await getPrompts()
+        setPreferenceId(data.id)
+        form.reset({
+          taskExtractionPrompt: data.task_extraction_prompt || "",
+          schedulingPrompt: data.scheduling_prompt || ""
+        })
+      } catch (error) {
+        toast({
+          title: "Error loading prompts",
+          description: "Failed to load existing prompts.",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadPrompts()
+  }, [form])
+
+  async function onSubmit(data: PromptFormValues) {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from("preference").upsert({
+      id: preferenceId,
+      user_id: user?.id,
+      task_extraction_prompt: data.taskExtractionPrompt,
+      scheduling_prompt: data.schedulingPrompt
+    }).select()
+
+    if (error) {
+      toast({
+        title: "Error updating prompts",
+        description: error.message,
+      })
+    }
+
     toast({
-      title: "You submitted the following prompts:",
-      description: (
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      ),
+      title: "Prompts updated",
+      description: "Your prompts have been updated.",
     })
+  }
+
+  if (loading) {
+    return <div>Loading...</div>
   }
 
   return (
@@ -67,7 +119,7 @@ function PromptForm() {
                   {...field}
                 />
               </FormControl>
-              <FormDescription>
+              <FormDescription aria-placeholder="Enter prompt for task extraction">
                 This prompt will be used to extract tasks and deadlines from text.
               </FormDescription>
               <FormMessage />

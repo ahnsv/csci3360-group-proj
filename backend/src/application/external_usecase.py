@@ -171,7 +171,7 @@ def list_google_calendars(google_credentials: Credentials):
     calendars = []
 
     for calendar in calendar_list.get("items", []):
-        calendars.append({"name": calendar["summary"], "id": calendar["id"]})
+        calendars.append({"name": calendar["summary"], "id": calendar["id"], "access_role": calendar["accessRole"]})
 
     return calendars
 

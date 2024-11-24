@@ -1,14 +1,18 @@
 import base64
 import json
+import uuid
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from google.oauth2.credentials import Credentials
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from starlette.requests import Request
 
+from src.application.external_usecase import list_google_calendars
 from src.database.models import Integration
 from src.deps import ApplicationContainer, AsyncDBSession, CurrentUser, gotrue_client
+from src.settings import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -176,3 +180,31 @@ async def check_required_integrations(current_user: CurrentUser, session: AsyncD
         raise HTTPException(status_code=400, detail="Missing required integrations")
     
     return integration_status
+
+@router.get("/google/calendars")
+async def get_google_calendars(current_user: CurrentUser, session: AsyncDBSession):
+    stmt = select(Integration).where(Integration.user_id == current_user.id, Integration.type == "google")
+    integration = await session.execute(stmt)
+    integration = integration.scalar_one_or_none()
+    if integration is None:
+        raise HTTPException(status_code=400, detail="Missing Google integration")
+
+    credentials = Credentials(
+        token=integration.token,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.gcal_client_id,
+        client_secret=settings.gcal_client_secret,
+        refresh_token=integration.refresh_token,
+    )
+
+    if credentials.expired:
+        credentials.refresh(Request())
+        await session.execute(
+            update(Integration)
+            .where(
+                Integration.user_id == uuid.UUID(current_user.id), Integration.type == "google"
+            )
+            .values(token=credentials.token, refresh_token=credentials.refresh_token)
+        )
+    calendars = list_google_calendars(credentials)
+    return calendars

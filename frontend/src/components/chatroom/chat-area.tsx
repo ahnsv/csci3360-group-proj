@@ -107,7 +107,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
     return (
         <div className="flex flex-col h-full bg-white relative">
             <ScrollArea 
-                className="h-[calc(100vh-90px)] p-4"
+                className="h-[calc(100vh-8rem)] p-4"
                 onScrollCapture={handleScroll}
             >
                 <div className="h-full" ref={scrollAreaRef}>

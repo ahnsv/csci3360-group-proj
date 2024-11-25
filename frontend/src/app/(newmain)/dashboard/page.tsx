@@ -11,13 +11,25 @@ import CourseCard from "@/components/ui/course-card";
 import { AuthProvider } from '@/contexts/AuthContext';
 
 const getCourseList: (accessToken: string) => Promise<Course[]> = async (accessToken: string) => {
-  const response = await fetch(`${API_URL}/courses`, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`
-    },
-    cache: 'force-cache'
-  });
-  return response.json();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(`${API_URL}/courses`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      },
+      cache: 'force-cache',
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export default async function Page() {

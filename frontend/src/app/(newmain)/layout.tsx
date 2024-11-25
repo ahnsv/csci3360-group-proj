@@ -46,13 +46,14 @@ export default async function Layout({
         redirect("/signin");
     }
 
-    // Get current path segments from headers
-    const pathSegments = headers().get("x-pathname")?.split('/')
-      .filter(Boolean)
-      .map(segment => ({
-        title: segment.charAt(0).toUpperCase() + segment.slice(1),
-        href: '/' + segment
-      })) ?? [];
+    const headersList = headers();
+    const pathname = headersList.get('x-current-path');
+    
+    // Match against navMain
+    const currentNav = navMain.find(item => 
+      item.url === pathname
+    );
+    console.log({currentNav});
 
     return (
     <SidebarProvider defaultOpen={false}>
@@ -69,20 +70,8 @@ export default async function Layout({
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Home</BreadcrumbLink>
+                  <BreadcrumbLink href={currentNav?.url}>{currentNav?.title}</BreadcrumbLink>
                 </BreadcrumbItem>
-                {pathSegments.map((segment, index) => (
-                  <BreadcrumbItem key={segment.href}>
-                    <BreadcrumbSeparator />
-                    {index === pathSegments.length - 1 ? (
-                      <BreadcrumbPage>{segment.title}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink href={segment.href}>
-                        {segment.title}
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                ))}
               </BreadcrumbList>
             </Breadcrumb>
           </div>

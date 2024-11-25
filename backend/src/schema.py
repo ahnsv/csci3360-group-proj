@@ -26,3 +26,21 @@ class TaskOut(TaskIn):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class CourseInfo(BaseModel):
+    course_name: str
+    course_id: str
+
+
+class GenerateSubtasksRequest(BaseModel):
+    task_name: str
+    course_name: str
+
+class GenerateSubtasksOut(BaseModel):
+    subtasks: list[TaskOut]
+
+class SubTaskOut(BaseModel):
+    title: str
+    description: Optional[str]
+    estimated_time: Optional[int]
+

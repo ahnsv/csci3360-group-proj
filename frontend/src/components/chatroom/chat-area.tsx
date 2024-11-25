@@ -1,15 +1,14 @@
 "use client"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useState, useRef, useEffect } from "react"
+import { getChatMessages, talkToAgent } from '@/app/_api/chat'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Send, Loader2, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import ReactMarkdown from 'react-markdown'
-import { chatWithScheduler, getChatMessages, talkToAgent } from '@/app/_api/chat'
-import ChatBubble from "./chat-bubble"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { ChevronDown, Loader2, Send } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import AssignmentQuizCard, { Assignment } from "./assignment-quiz-card"
+import ChatBubble from "./chat-bubble"
 
 type ChatAction = {
     name: string

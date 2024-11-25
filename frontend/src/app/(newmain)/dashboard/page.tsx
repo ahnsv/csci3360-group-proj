@@ -15,6 +15,7 @@ const getCourseList: (accessToken: string) => Promise<Course[]> = async (accessT
     headers: {
       'Authorization': `Bearer ${accessToken}`
     },
+    cache: 'force-cache'
   });
   return response.json();
 }

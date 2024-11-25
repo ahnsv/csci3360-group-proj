@@ -82,7 +82,7 @@ export default function Component({ assignments = [], quizzes = [] }: Assignment
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
-                  <TaskEstimationForm taskName={assignment.title} taskContext={assignment.course_name} />
+                  <TaskEstimationForm taskName={assignment.title} courseName={assignment.course_name} />
                 </DialogContent>
                 </Dialog>
               </div>

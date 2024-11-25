@@ -46,6 +46,7 @@ export const getMaterials: (accessToken: string, courseId: number) => Promise<Ma
         headers: {
             'Authorization': `Bearer ${accessToken}`
         },
+        cache: 'force-cache'
     });
     return response.json();
 }
@@ -77,6 +78,7 @@ export const getAssignmentsOrQuizzes: (accessToken: string, courseId: number) =>
         headers: {
             'Authorization': `Bearer ${accessToken}`
         },
+        cache: 'force-cache'
     });
     return response.json();
 }
@@ -215,7 +217,7 @@ export default function Component({ courseInfo }: CourseCardProps) {
           {selectedAssignment && (
             <TaskEstimationForm 
               taskName={selectedAssignment.title}
-              taskContext={`Due: ${selectedAssignment.due_at} | Course: ${selectedAssignment.course_name}`}
+              courseName={selectedAssignment.course_name}
             />
           )}
         </DialogContent>

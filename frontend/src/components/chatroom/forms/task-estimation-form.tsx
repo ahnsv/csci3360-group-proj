@@ -77,7 +77,7 @@ export default function TaskEstimationForm({ taskName, courseName, closeForm }: 
           throw new Error('Failed to fetch subtasks')
         }
         const data = await response.json()
-        setRecommendedSubTasks(data.map((task: any) => ({
+        setRecommendedSubTasks(data.map((task: { title: string, estimated_time: number }) => ({
           ...task,
           estimatedTime: task.estimated_time,
           isSelected: false,
@@ -114,7 +114,7 @@ export default function TaskEstimationForm({ taskName, courseName, closeForm }: 
           const startTime = `${startHour}:${startMinute}`
           const endTime = `${endHour}:${endMinute}`
           
-          const hasConflict = events.items.some((event: any) => {
+          const hasConflict = events.items.some((event: { start: { dateTime: string }, end: { dateTime: string } }) => {
             const eventStart = new Date(event.start.dateTime)
             const eventEnd = new Date(event.end.dateTime)
             const slotStart = new Date(selectedDate)

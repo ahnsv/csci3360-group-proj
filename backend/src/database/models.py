@@ -218,3 +218,28 @@ class CourseMembership(Base):
     )
 
     course = relationship("Course")
+
+    def __repr__(self):
+        return f"<CourseMembership(id={self.id}, course_id='{self.course_id}', user_id='{self.user_id}')>"
+
+
+class Preference(Base):
+    __tablename__ = "preference"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    study_type = Column(String, nullable=True, server_default="morning")
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+        unique=True
+    )
+    task_extraction_prompt = Column(Text, nullable=True)
+    scheduling_prompt = Column(Text, nullable=True) 
+    primary_calendar = Column(Text, nullable=True)
+
+    def __repr__(self):
+        return f"<Preference(id={self.id}, user_id='{self.user_id}', study_type='{self.study_type}')>"

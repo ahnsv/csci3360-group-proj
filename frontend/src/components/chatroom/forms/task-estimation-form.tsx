@@ -9,11 +9,12 @@ import { useToast } from "@/hooks/use-toast"
 import { Clock, CalendarDays, Plus, X } from "lucide-react"
 import { API_URL } from "@/app/_api/constants"
 import { useAuth } from "@/contexts/AuthContext"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface SubTask {
   title: string
   estimatedTime: number
-  isSelected: boolean
+  scheduled: boolean
 }
 
 interface TimeSlot {
@@ -25,9 +26,29 @@ interface TimeSlot {
 type TaskEstimationFormProps = {
     taskName: string
     courseName: string
+    closeForm: () => void
 }
 
-export default function TaskEstimationForm({ taskName, courseName }: TaskEstimationFormProps) {
+async function getEventsOnDay(date: Date, accessToken: string) {
+  const response = await fetch(`${API_URL}/auth/google/events/?date=${date.toISOString().split('T')[0]}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`
+    }
+  })
+  if (!response.ok) {
+    throw new Error('Failed to fetch events')
+  }
+  const data = await response.json()
+  return data
+}
+
+interface ScheduleRecommendation {
+  subtask: SubTask
+  recommendedSlot: TimeSlot | null
+}
+
+export default function TaskEstimationForm({ taskName, courseName, closeForm }: TaskEstimationFormProps) {
   const [step, setStep] = useState<'estimation' | 'planning'>('estimation')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [customSubTasks, setCustomSubTasks] = useState<SubTask[]>([])
@@ -35,6 +56,7 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
   const { accessToken } = useAuth()
 
   const [recommendedSubTasks, setRecommendedSubTasks] = useState<SubTask[]>([])
+  const [selectedRecommendedSubTasks, setSelectedRecommendedSubTasks] = useState<SubTask[]>([])
   const [isLoading, setIsLoading] = useState(false)
   useEffect(() => {
     const fetchSubTasks = async () => {
@@ -58,7 +80,8 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
         setRecommendedSubTasks(data.map((task: any) => ({
           ...task,
           estimatedTime: task.estimated_time,
-          isSelected: false
+          isSelected: false,
+          scheduled: false
         })))
         setIsLoading(false)
       } catch (error) {
@@ -71,24 +94,123 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
     fetchSubTasks()
   }, [taskName, courseName])
 
-  // Mock timeSlots - would be dynamic based on calendar data
-  const timeSlots: TimeSlot[] = [
-    { start: "9:00", end: "10:00", isAvailable: true },
-    { start: "10:00", end: "11:00", isAvailable: false },
-    { start: "11:00", end: "12:00", isAvailable: true },
-    { start: "13:00", end: "14:00", isAvailable: true },
-    { start: "14:00", end: "15:00", isAvailable: false },
-  ]
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([])
+  const [scheduleRecommendations, setScheduleRecommendations] = useState<ScheduleRecommendation[]>([])
+  const [currentSubtask, setCurrentSubtask] = useState<SubTask | null>(null)
 
-  const handleSubTaskToggle = (index: number) => {
-    setRecommendedSubTasks(recommendedSubTasks.map((task, idx) => 
-      idx === index ? { ...task, isSelected: !task.isSelected } : task
-    ))
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const events = await getEventsOnDay(selectedDate, accessToken)
+      
+      // Create 30-minute time slots between 9am-5pm
+      const timeSlots: TimeSlot[] = []
+      for (let hour = 9; hour < 17; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const startHour = `${hour}`.padStart(2, '0')
+          const startMinute = `${minute}`.padStart(2, '0')
+          const endHour = minute === 30 ? `${hour}`.padStart(2, '0') : `${hour + 1}`.padStart(2, '0')
+          const endMinute = minute === 30 ? '00' : '30'
+          
+          const startTime = `${startHour}:${startMinute}`
+          const endTime = `${endHour}:${endMinute}`
+          
+          const hasConflict = events.items.some((event: any) => {
+            const eventStart = new Date(event.start.dateTime)
+            const eventEnd = new Date(event.end.dateTime)
+            const slotStart = new Date(selectedDate)
+            const slotEnd = new Date(selectedDate)
+            
+            slotStart.setHours(hour, minute, 0)
+            slotEnd.setHours(minute === 30 ? hour : hour + 1, minute === 30 ? 0 : 30, 0)
+            
+            return eventStart < slotEnd && eventEnd > slotStart
+          })
+
+          timeSlots.push({
+            start: startTime,
+            end: endTime,
+            isAvailable: !hasConflict
+          })
+        }
+      }
+      
+      setAvailableTimeSlots(timeSlots)
+    }
+
+    fetchEvents()
+  }, [selectedDate, accessToken])
+
+  useEffect(() => {
+    setCurrentSubtask(getNextUnscheduledSubtask())
+  }, [selectedRecommendedSubTasks, customSubTasks])
+
+  const getNextUnscheduledSubtask = () => {
+    const allTasks = [...selectedRecommendedSubTasks, ...customSubTasks]
+    return allTasks.find(task => !task.scheduled) || null
+  }
+
+  const getValidTimeSlots = () => {
+    if (!currentSubtask) return []
+    
+    const taskDurationMinutes = currentSubtask.estimatedTime
+    const validSlots: TimeSlot[] = []
+
+    // Convert time string to minutes since 9 AM
+    const timeToMinutes = (timeStr: string) => {
+      const [hours, minutes] = timeStr.split(':').map(Number)
+      return (hours - 9) * 60 + minutes
+    }
+
+    // Convert minutes since 9 AM to time string
+    const minutesToTime = (minutes: number) => {
+      const hours = Math.floor(minutes / 60) + 9
+      const mins = minutes % 60
+      return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+    }
+
+    // Find consecutive available slots that match task duration
+    for (let i = 0; i < availableTimeSlots.length; i++) {
+      const startSlot = availableTimeSlots[i]
+      const startMinutes = timeToMinutes(startSlot.start)
+      const endMinutes = startMinutes + taskDurationMinutes
+      
+      // Check if the end time would go beyond 5 PM (480 = minutes from 9 AM to 5 PM)
+      if (endMinutes > 480) break
+
+      let hasConflict = false
+      const slotsNeeded = Math.ceil(taskDurationMinutes / 30)
+
+      // Check if all required slots are available
+      for (let j = 0; j < slotsNeeded; j++) {
+        if (!availableTimeSlots[i + j]?.isAvailable) {
+          hasConflict = true
+          break
+        }
+      }
+
+      if (!hasConflict) {
+        validSlots.push({
+          start: startSlot.start,
+          end: minutesToTime(endMinutes),
+          isAvailable: true
+        })
+      }
+    }
+
+    return validSlots
+  }
+
+  const handleRecommendedSubTaskToggle = (index: number) => {
+    setSelectedRecommendedSubTasks(prev => {
+      if (prev.includes(recommendedSubTasks[index])) {
+        return prev.filter(task => task !== recommendedSubTasks[index])
+      }
+      return [...prev, recommendedSubTasks[index]]
+    })
   }
 
   const getTotalEstimatedTime = () => {
-    return recommendedSubTasks
-      .filter(task => task.isSelected)
+    return selectedRecommendedSubTasks
       .reduce((total, task) => total + task.estimatedTime, 0)
   }
 
@@ -98,6 +220,34 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
       description: "Your plan has been added to your calendar.",
       duration: 3000,
     })
+    closeForm()
+  }
+
+  const generateRecommendations = (timeSlots: TimeSlot[]) => {
+    const allTasks = [...selectedRecommendedSubTasks, ...customSubTasks]
+    let currentSlotIndex = 0
+    
+    const recommendations: ScheduleRecommendation[] = allTasks.map(task => {
+      // Find next available time slot that can fit the task
+      while (currentSlotIndex < timeSlots.length) {
+        if (timeSlots[currentSlotIndex].isAvailable) {
+          const recommendation: ScheduleRecommendation = {
+            subtask: task,
+            recommendedSlot: timeSlots[currentSlotIndex]
+          }
+          currentSlotIndex++
+          return recommendation
+        }
+        currentSlotIndex++
+      }
+      
+      return {
+        subtask: task,
+        recommendedSlot: null
+      }
+    })
+    
+    setScheduleRecommendations(recommendations)
   }
 
   return (
@@ -128,8 +278,8 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
                 recommendedSubTasks.map((task, index) => (
                   <div key={index} className="flex items-center space-x-3">
                     <Checkbox
-                      checked={task.isSelected}
-                      onCheckedChange={() => handleSubTaskToggle(index)}
+                      checked={selectedRecommendedSubTasks.includes(task)}
+                      onCheckedChange={() => handleRecommendedSubTaskToggle(index)}
                     />
                     <Label>{task.title}</Label>
                     <span className="text-sm text-gray-500">
@@ -147,7 +297,7 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => setCustomSubTasks([...customSubTasks, { title: '', estimatedTime: 0, isSelected: true }])}
+                    onClick={() => setCustomSubTasks([...customSubTasks, { title: '', estimatedTime: 0, scheduled: false }])}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -162,7 +312,7 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
                       setCustomSubTasks([...customSubTasks, { 
                         title: e.currentTarget.value.trim(), 
                         estimatedTime: 0, 
-                        isSelected: true 
+                        scheduled: false
                       }]);
                       e.currentTarget.value = '';
                     }
@@ -188,10 +338,10 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
               {customSubTasks.map((subtask, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <Checkbox
-                    checked={subtask.isSelected}
+                    checked={selectedRecommendedSubTasks.includes(subtask)}
                     onCheckedChange={() => {
                       const newSubTasks = [...customSubTasks];
-                      newSubTasks[index].isSelected = !subtask.isSelected;
+                      newSubTasks[index].scheduled = !subtask.scheduled;
                       setCustomSubTasks(newSubTasks);
                     }}
                   />
@@ -231,18 +381,72 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
                 />
               </div>
               <div className="flex-1 space-y-4">
-                <h3 className="text-lg font-medium">Available Time Slots</h3>
-                {timeSlots.map((slot, index) => (
-                  <Button
-                    key={index}
-                    variant={slot.isAvailable ? "outline" : "ghost"}
-                    disabled={!slot.isAvailable}
-                    className="w-full justify-start"
-                  >
-                    <CalendarDays className="w-4 h-4 mr-2" />
-                    {slot.start} - {slot.end}
-                  </Button>
-                ))}
+                {currentSubtask ? (
+                  <>
+                    <div className="p-4 border rounded-md bg-blue-50">
+                      <h3 className="text-lg font-medium">Current Task</h3>
+                      <p className="text-sm">{currentSubtask.title}</p>
+                      <p className="text-sm text-gray-600">Duration: {currentSubtask.estimatedTime} minutes</p>
+                    </div>
+                    <h3 className="text-lg font-medium">Available Time Slots</h3>
+                    <ScrollArea className="h-64"> 
+                      {getValidTimeSlots().map((slot, index) => (
+                        <Button
+                          key={index}
+                          variant="outline"
+                          className="w-full justify-start mb-2"
+                          onClick={() => {
+                            if (currentSubtask) {
+                              // Update the subtask as scheduled
+                              if (selectedRecommendedSubTasks.includes(currentSubtask)) {
+                                setSelectedRecommendedSubTasks(prev =>
+                                  prev.map(task =>
+                                    task === currentSubtask ? { ...task, scheduled: true } : task
+                                  )
+                                )
+                              } else {
+                                setCustomSubTasks(prev =>
+                                  prev.map(task =>
+                                    task === currentSubtask ? { ...task, scheduled: true } : task
+                                  )
+                                )
+                              }
+                              // Set next unscheduled subtask
+                              setCurrentSubtask(getNextUnscheduledSubtask())
+                            }
+                          }}
+                        >
+                          <CalendarDays className="w-4 h-4 mr-2" />
+                          {slot.start} - {slot.end}
+                        </Button>
+                      ))}
+                    </ScrollArea>
+                  </>
+                ) : (
+                  <div className="p-4 border rounded-md bg-green-50">
+                    <h3 className="text-lg font-medium">All Tasks Scheduled!</h3>
+                    <p className="text-sm">You can now add these to your calendar.</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-4">
+                <h3 className="text-lg font-medium">Tasks to Schedule</h3>
+                <div className="space-y-2">
+                  {[...selectedRecommendedSubTasks, ...customSubTasks].map((subtask, index) => (
+                    <div 
+                      key={index}
+                      className={`flex items-center space-x-2 p-2 rounded ${
+                        subtask.scheduled ? 'bg-gray-50 text-gray-400' : 
+                        subtask === currentSubtask ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <span className="flex-1 text-sm">{subtask.title}</span>
+                      <span className="text-sm text-gray-500">
+                        ({subtask.estimatedTime} min)
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

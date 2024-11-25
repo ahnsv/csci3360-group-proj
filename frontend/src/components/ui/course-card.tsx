@@ -139,10 +139,10 @@ export default function Component({ courseInfo }: CourseCardProps) {
         </CardHeader>
         <Separator className="my-2" />
         <CardContent className="mt-4">
-          <h3 className="text-sm font-light mb-2 flex items-center">
+          {/* <h3 className="text-sm font-light mb-2 flex items-center">
             <BookOpen className="mr-2" size={15} />
             Upcoming Assignments & Quizzes
-          </h3>
+          </h3> */}
           {isLoading ? (
             <div className="space-y-2 mb-4">
               {[1, 2, 3].map((i) => (
@@ -164,7 +164,7 @@ export default function Component({ courseInfo }: CourseCardProps) {
                         {assignment.title}
                       </Button>
                     </HoverCardTrigger>
-                    <HoverCardContent className="w-80">
+                    <HoverCardContent className="w-full">
                       <div className="space-y-1">
                         <h4 className="text-sm font-semibold">{assignment.title}</h4>
                         <p className="text-sm">Due: {assignment.due_at}</p>
@@ -176,10 +176,10 @@ export default function Component({ courseInfo }: CourseCardProps) {
               ))}
             </ul>
           )}
-          <h3 className="text-sm font-light mb-2 flex items-center">
+          {/* <h3 className="text-sm font-light mb-2 flex items-center">
             <FileText className="mr-2" size={15} />
             Course Materials
-          </h3>
+          </h3> */}
           {isLoading ? (
             <div className="grid grid-cols-6 gap-2">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -218,6 +218,7 @@ export default function Component({ courseInfo }: CourseCardProps) {
             <TaskEstimationForm 
               taskName={selectedAssignment.title}
               courseName={selectedAssignment.course_name}
+              closeForm={() => setIsEstimationFormOpen(false)}
             />
           )}
         </DialogContent>

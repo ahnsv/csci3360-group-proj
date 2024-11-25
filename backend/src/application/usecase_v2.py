@@ -11,7 +11,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application import external_usecase
-from src.database.models import Integration, Task
+from src.database.models import Integration, Preference, Task
 from src.schema import CourseInfo, GenerateSubtasksOut, SubTaskOut, TaskIn, TaskOut
 from src.settings import settings
 
@@ -341,7 +341,7 @@ async def generate_subtasks(
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful assistant that breaks down tasks into subtasks. Return a JSON array of subtasks with title, description, and estimated_time fields. Estimated time should be in minutes. Make sure to exclude obvious tasks like 'Read the textbook', 'Submit an assignment', 'Take notes', 'Review for exam', etc."
+            "content": "You are a helpful assistant that breaks down tasks into subtasks. Return a JSON array of subtasks with title, description, and estimated_time fields. Estimated time should be in minutes. Make sure to exclude obvious tasks like 'Read the textbook', 'Submit an assignment', 'Take notes', 'Review for exam', etc. Limit your response upto 5 subtasks."
         },
         {
             "role": "user", 
@@ -368,3 +368,31 @@ async def generate_subtasks(
         subtasks.append(task_out)
     
     return [task.model_dump(mode="json") for task in subtasks]
+
+async def get_events_on_date(
+    session: AsyncSession, user_id: str, date: datetime
+) -> list[dict[str, Any]]:
+    google_token_data, refresh_token = await get_integration_token(
+        session, user_id, "google"
+    )
+    preference_result = await session.execute(select(Preference).where(Preference.user_id == uuid.UUID(user_id)))
+    preference = preference_result.scalar_one_or_none()
+    google_calendar_id = None
+    if preference:
+        google_calendar_id = preference.primary_calendar
+
+    credentials = Credentials(
+        token=google_token_data,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.gcal_client_id,
+        client_secret=settings.gcal_client_secret,
+        refresh_token=refresh_token,
+    )
+    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
+    end_date = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
+    return external_usecase.list_google_calendar_events(
+        google_credentials=credentials,
+        calendar_id="primary" ,
+        start_date=start_date,
+        end_date=end_date,
+    )

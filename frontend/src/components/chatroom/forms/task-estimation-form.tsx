@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
-import { Clock, CalendarDays } from "lucide-react"
+import { Clock, CalendarDays, Plus, X } from "lucide-react"
 import { API_URL } from "@/app/_api/constants"
 import { useAuth } from "@/contexts/AuthContext"
 
@@ -30,7 +30,7 @@ type TaskEstimationFormProps = {
 export default function TaskEstimationForm({ taskName, courseName }: TaskEstimationFormProps) {
   const [step, setStep] = useState<'estimation' | 'planning'>('estimation')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [customEstimation, setCustomEstimation] = useState("")
+  const [customSubTasks, setCustomSubTasks] = useState<SubTask[]>([])
   const { toast } = useToast()
   const { accessToken } = useAuth()
 
@@ -140,14 +140,74 @@ export default function TaskEstimationForm({ taskName, courseName }: TaskEstimat
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Custom Estimation (minutes)</Label>
-              <Input
-                type="number"
-                value={customEstimation}
-                onChange={(e) => setCustomEstimation(e.target.value)}
-                placeholder="Enter custom time estimation"
-              />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Custom Subtasks</Label>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setCustomSubTasks([...customSubTasks, { title: '', estimatedTime: 0, isSelected: true }])}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Input
+                  placeholder="Type subtask title and press Enter"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                      setCustomSubTasks([...customSubTasks, { 
+                        title: e.currentTarget.value.trim(), 
+                        estimatedTime: 0, 
+                        isSelected: true 
+                      }]);
+                      e.currentTarget.value = '';
+                    }
+                  }}
+                />
+                <Input
+                  type="number"
+                  placeholder="Minutes"
+                  className="w-24"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.currentTarget.value) {
+                      const minutes = parseInt(e.currentTarget.value);
+                      if (minutes > 0 && customSubTasks.length > 0) {
+                        const newSubTasks = [...customSubTasks];
+                        newSubTasks[newSubTasks.length - 1].estimatedTime = minutes;
+                        setCustomSubTasks(newSubTasks);
+                        e.currentTarget.value = '';
+                      }
+                    }
+                  }}
+                />
+              </div>
+              {customSubTasks.map((subtask, index) => (
+                <div key={index} className="flex items-center space-x-3">
+                  <Checkbox
+                    checked={subtask.isSelected}
+                    onCheckedChange={() => {
+                      const newSubTasks = [...customSubTasks];
+                      newSubTasks[index].isSelected = !subtask.isSelected;
+                      setCustomSubTasks(newSubTasks);
+                    }}
+                  />
+                  <span className="flex-1">{subtask.title}</span>
+                  <span className="text-sm text-gray-500 w-24 text-center">
+                    {subtask.estimatedTime} min
+                  </span>
+                  <Button variant="ghost" size="icon" onClick={() => {
+                    const newSubTasks = [...customSubTasks];
+                    newSubTasks.splice(index, 1);
+                    setCustomSubTasks(newSubTasks);
+                  }}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
 
             <div className="flex items-center space-x-2 text-sm text-gray-600">

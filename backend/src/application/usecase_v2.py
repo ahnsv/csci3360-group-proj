@@ -5,13 +5,14 @@ from typing import Any, Literal, Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application import external_usecase
-from src.database.models import Integration, Task
-from src.schema import TaskIn, TaskOut
+from src.database.models import Integration, Preference, Task
+from src.schema import CourseInfo, GenerateSubtasksOut, SubTaskOut, TaskIn, TaskOut
 from src.settings import settings
 
 
@@ -308,7 +309,10 @@ async def list_tasks(
     """
     query = select(Task).where(Task.user_id == uuid.UUID(user_id))
     result = await session.execute(query)
-    return [TaskOut.model_validate(task).model_dump(mode="json") for task in result.scalars().all()]
+    return [
+        TaskOut.model_validate(task).model_dump(mode="json")
+        for task in result.scalars().all()
+    ]
 
 
 async def get_task(session: AsyncSession, user_id: str, task_id: int) -> dict[str, Any]:
@@ -325,3 +329,70 @@ async def get_task(session: AsyncSession, user_id: str, task_id: int) -> dict[st
     query = select(Task).where(Task.user_id == uuid.UUID(user_id), Task.id == task_id)
     result = await session.execute(query)
     return TaskOut.model_validate(result.scalar_one_or_none()).model_dump(mode="json")
+
+
+async def generate_subtasks(
+    openai: AsyncOpenAI,
+    session: AsyncSession,
+    user_id: str,
+    task_name: str,
+    course_name: str,
+) -> list[SubTaskOut]:
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a helpful assistant that breaks down tasks into subtasks. Return a JSON array of subtasks with title, description, and estimated_time fields. Estimated time should be in minutes. Make sure to exclude obvious tasks like 'Read the textbook', 'Submit an assignment', 'Take notes', 'Review for exam', etc. Limit your response upto 5 subtasks."
+        },
+        {
+            "role": "user", 
+            "content": f"Break down this task into subtasks: {task_name}" + (f" for the course {course_name}" if course_name else "")
+        }
+    ]
+    
+    response = await openai.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        response_format={"type": "json_object"},
+        temperature=0.7
+    )
+
+    subtasks_data = json.loads(response.choices[0].message.content)
+    
+    subtasks = []
+    for subtask in subtasks_data["subtasks"]:
+        task_out = SubTaskOut(
+            title=subtask["title"],
+            description=subtask.get("description"),
+            estimated_time=subtask.get("estimated_time"),
+        )
+        subtasks.append(task_out)
+    
+    return [task.model_dump(mode="json") for task in subtasks]
+
+async def get_events_on_date(
+    session: AsyncSession, user_id: str, date: datetime
+) -> list[dict[str, Any]]:
+    google_token_data, refresh_token = await get_integration_token(
+        session, user_id, "google"
+    )
+    preference_result = await session.execute(select(Preference).where(Preference.user_id == uuid.UUID(user_id)))
+    preference = preference_result.scalar_one_or_none()
+    google_calendar_id = None
+    if preference:
+        google_calendar_id = preference.primary_calendar
+
+    credentials = Credentials(
+        token=google_token_data,
+        token_uri="https://oauth2.googleapis.com/token",
+        client_id=settings.gcal_client_id,
+        client_secret=settings.gcal_client_secret,
+        refresh_token=refresh_token,
+    )
+    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
+    end_date = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
+    return external_usecase.list_google_calendar_events(
+        google_credentials=credentials,
+        calendar_id="primary" ,
+        start_date=start_date,
+        end_date=end_date,
+    )

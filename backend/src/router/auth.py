@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime
 import json
 import uuid
 
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, update
 from starlette.requests import Request
 
+from src.application import usecase_v2
 from src.application.external_usecase import list_google_calendars
 from src.database.models import Integration
 from src.deps import ApplicationContainer, AsyncDBSession, CurrentUser, gotrue_client
@@ -208,3 +210,9 @@ async def get_google_calendars(current_user: CurrentUser, session: AsyncDBSessio
         )
     calendars = list_google_calendars(credentials)
     return calendars
+
+@router.get("/google/events")
+async def get_google_events(current_user: CurrentUser, session: AsyncDBSession, date: str):
+    datetime_obj = datetime.strptime(date, "%Y-%m-%d")
+    events = await usecase_v2.get_events_on_date(session, current_user.id, datetime_obj)
+    return events

@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { Button } from "../ui/button"
 import TaskEstimationForm from "./forms/task-estimation-form"
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog"
+import { useState } from "react"
 
 export interface Assignment {
   title: string
@@ -26,6 +27,7 @@ interface AssignmentDisplayProps {
 }
 
 export default function Component({ assignments = [], quizzes = [] }: AssignmentDisplayProps) {
+  const [isFormOpen, setIsFormOpen] = useState(false)
   return (
     <Card className="w-full max-w-xl overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
@@ -74,7 +76,7 @@ export default function Component({ assignments = [], quizzes = [] }: Assignment
                 View Assignment
                 <ExternalLink className="w-4 h-4 ml-1" />
               </a>
-              <Dialog>
+              <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Clock className="w-4 h-4 mr-2" />
@@ -82,7 +84,7 @@ export default function Component({ assignments = [], quizzes = [] }: Assignment
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
-                  <TaskEstimationForm taskName={assignment.title} taskContext={assignment.course_name} />
+                  <TaskEstimationForm taskName={assignment.title} courseName={assignment.course_name} closeForm={() => setIsFormOpen(false)} />
                 </DialogContent>
                 </Dialog>
               </div>

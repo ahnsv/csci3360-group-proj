@@ -15,6 +15,7 @@ const getCourseList: (accessToken: string) => Promise<Course[]> = async (accessT
     headers: {
       'Authorization': `Bearer ${accessToken}`
     },
+    cache: 'force-cache'
   });
   return response.json();
 }
@@ -59,10 +60,6 @@ export default async function Page() {
           <TaskChart />
         </div>
         <div className="min-h-[100vh] flex-1 rounded-xl md:min-h-min my-2" >
-          <h3 className="text-sm font-light mb-2 flex items-center">
-            <FileText className="mr-2" size={15} />
-            Courses
-          </h3>
           <ScrollArea className="w-full whitespace-nowrap my-2">
             <div className="flex space-x-4 pb-4">
               {courses.map((course) => (

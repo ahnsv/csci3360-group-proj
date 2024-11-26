@@ -216,6 +216,7 @@ export default function Component({ courseInfo }: CourseCardProps) {
         <DialogContent className="max-w-4xl">
           {selectedAssignment && (
             <TaskEstimationForm 
+              accessToken={accessToken}
               taskName={selectedAssignment.title}
               courseName={selectedAssignment.course_name}
               closeForm={() => setIsEstimationFormOpen(false)}

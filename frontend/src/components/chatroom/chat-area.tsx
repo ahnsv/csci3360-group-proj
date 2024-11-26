@@ -123,7 +123,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                             const assignments = msg.toolInvocations.find(
                                 tool => tool.name === "get_upcoming_assignments_and_quizzes_tool"
                             )?.result?.assignments;
-                            return <AssignmentQuizCard key={index} assignments={assignments as Assignment[]} />;
+                            return <AssignmentQuizCard key={index} accessToken={accessToken} assignments={assignments as Assignment[]} />;
                         }
 
                         return <ChatBubble key={index} message={msg} />;

@@ -8,7 +8,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
 import { Clock, CalendarDays, Plus, X } from "lucide-react"
 import { API_URL } from "@/app/_api/constants"
-import { useAuth } from "@/contexts/AuthContext"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface SubTask {
@@ -27,6 +26,7 @@ type TaskEstimationFormProps = {
     taskName: string
     courseName: string
     closeForm: () => void
+    accessToken: string
 }
 
 async function getEventsOnDay(date: Date, accessToken: string) {
@@ -48,12 +48,11 @@ interface ScheduleRecommendation {
   recommendedSlot: TimeSlot | null
 }
 
-export default function TaskEstimationForm({ taskName, courseName, closeForm }: TaskEstimationFormProps) {
+export default function TaskEstimationForm({ taskName, courseName, closeForm, accessToken }: TaskEstimationFormProps) {
   const [step, setStep] = useState<'estimation' | 'planning'>('estimation')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [customSubTasks, setCustomSubTasks] = useState<SubTask[]>([])
   const { toast } = useToast()
-  const { accessToken } = useAuth()
 
   const [recommendedSubTasks, setRecommendedSubTasks] = useState<SubTask[]>([])
   const [selectedRecommendedSubTasks, setSelectedRecommendedSubTasks] = useState<SubTask[]>([])

@@ -6,6 +6,7 @@ import { Button } from "../ui/button"
 import TaskEstimationForm from "./forms/task-estimation-form"
 import { Dialog, DialogContent, DialogTrigger } from "../ui/dialog"
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 export interface Assignment {
   title: string
@@ -24,9 +25,10 @@ export interface Quiz {
 interface AssignmentDisplayProps {
   assignments?: Assignment[]
   quizzes?: Quiz[] // Assuming quizzes might be added later
+  accessToken: string
 }
 
-export default function Component({ assignments = [], quizzes = [] }: AssignmentDisplayProps) {
+export default function AssignmentQuizCard({ assignments = [], quizzes = [], accessToken }: AssignmentDisplayProps) {
   const [isFormOpen, setIsFormOpen] = useState(false)
   return (
     <Card className="w-full max-w-xl overflow-hidden">
@@ -84,7 +86,7 @@ export default function Component({ assignments = [], quizzes = [] }: Assignment
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-2xl">
-                  <TaskEstimationForm taskName={assignment.title} courseName={assignment.course_name} closeForm={() => setIsFormOpen(false)} />
+                  <TaskEstimationForm accessToken={accessToken} taskName={assignment.title} courseName={assignment.course_name} closeForm={() => setIsFormOpen(false)} />
                 </DialogContent>
                 </Dialog>
               </div>

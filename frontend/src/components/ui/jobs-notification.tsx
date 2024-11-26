@@ -22,9 +22,6 @@ export function JobsNotification({ accessToken }: { accessToken?: string }) {
   const [jobs, setJobs] = useState<Job[]>([])
   const [pendingCount, setPendingCount] = useState(0)
 
-  if (!accessToken) {
-    return null
-  }
 
   const fetchJobs = async () => {
     try {
@@ -49,6 +46,10 @@ export function JobsNotification({ accessToken }: { accessToken?: string }) {
     const interval = setInterval(fetchJobs, 5000) // Poll every 5 seconds
     return () => clearInterval(interval)
   }, [accessToken])
+
+  if (!accessToken) {
+    return null
+  }
 
   return (
     <DropdownMenu>

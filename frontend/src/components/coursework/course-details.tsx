@@ -102,7 +102,7 @@ export default function CourseDetails() {
         </CardContent>
       </Card>
 
-      {course.materials && course.materials.length > 0 && (
+      {course.course_material && course.course_material.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Course Materials</CardTitle>
@@ -110,7 +110,7 @@ export default function CourseDetails() {
           <CardContent>
             <ScrollArea className="h-[300px]">
               <div className="space-y-4">
-                {course.materials.map((material) => (
+                {course.course_material.map((material) => (
                   <div key={material.id} className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <a 

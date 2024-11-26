@@ -5,11 +5,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ChevronDown, Loader2, Send } from "lucide-react"
+import { ChevronDown, Loader2, Send, Beaker, FlaskConical } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import AssignmentQuizCard, { Assignment } from "./assignment-quiz-card"
 import ChatBubble from "./chat-bubble"
 import MessageStarter from "./message-starter"
+import { useToast } from "@/hooks/use-toast"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ChatAction = {
     name: string
@@ -65,6 +67,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
     const [isStarterOpen, setIsStarterOpen] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         getChatMessages(accessToken).then(setChatMessages);
@@ -82,16 +85,16 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
         talkToAgent(accessToken, inputMessage).then((msg) => {
             setChatMessages((prev) => [...prev, msg]);
         })
-        .catch(() => {
-            setChatMessages((prev) => [...prev, {
-                author: 'agent',
-                message: 'Sorry, I\'m having trouble processing your message. Please try again later.',
-                sent_at: new Date(),
-            }]);
-        })
-        .finally(() => {
-            setIsLoading(false);
-        });
+            .catch(() => {
+                setChatMessages((prev) => [...prev, {
+                    author: 'agent',
+                    message: 'Sorry, I\'m having trouble processing your message. Please try again later.',
+                    sent_at: new Date(),
+                }]);
+            })
+            .finally(() => {
+                setIsLoading(false);
+            });
         setInputMessage('');
     };
 
@@ -108,15 +111,15 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
 
     return (
         <div className="flex flex-col h-full bg-white relative">
-            <ScrollArea 
+            <ScrollArea
                 className="h-[calc(100vh-8rem)] p-4"
                 onScrollCapture={handleScroll}
             >
                 <div className="h-full" ref={scrollAreaRef}>
                     {chatMessages.map((msg, index) => {
                         const hasAssignmentTool = msg.toolInvocations?.some(
-                            tool => tool.name === "get_upcoming_assignments_and_quizzes_tool" && 
-                            tool.state === "result"
+                            tool => tool.name === "get_upcoming_assignments_and_quizzes_tool" &&
+                                tool.state === "result"
                         );
 
                         if (hasAssignmentTool && msg.toolInvocations) {
@@ -131,7 +134,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                     {isLoading && (
                         <div className="flex items-start mb-4">
                             <Avatar className="mr-2">
-                                <AvatarImage alt="AI"/>
+                                <AvatarImage alt="AI" />
                                 <AvatarFallback>AI</AvatarFallback>
                             </Avatar>
                             <div className="rounded-lg p-2 bg-gray-200 flex items-center">
@@ -142,13 +145,13 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                     )}
                 </div>
             </ScrollArea>
-            
+
             {showScrollButton && <ScrollToBottomButton onClick={scrollToBottom} />}
-            
+
             <div className="px-4 border-t border-gray-200">
                 <form className="flex items-center h-16 gap-2" onSubmit={handleSubmit}>
-                    <div className="relative">
-                        <MessageStarter 
+                    <div className="relative flex gap-2 items-center">
+                        <MessageStarter
                             onMessageSelect={(message) => {
                                 setInputMessage(message);
                                 const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
@@ -157,17 +160,41 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                             isOpen={isStarterOpen}
                             onToggle={() => setIsStarterOpen(!isStarterOpen)}
                         />
+
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            toast({
+                                                title: "Coming Soon",
+                                                description: "RAG mode is a coming soon feature!",
+                                            })
+                                        }}
+                                        className="h-8 w-8"
+                                    >
+                                        <FlaskConical className="h-4 w-4" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Enable RAG mode</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
-                    <Input 
-                        type="text" 
-                        placeholder="Type your message..." 
+                    <Input
+                        type="text"
+                        placeholder="Type your message..."
                         className="flex-grow text-sm"
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         disabled={isLoading}
                     />
                     <Button type="submit" size="icon" disabled={isLoading}>
-                        <Send className="h-4 w-4"/>
+                        <Send className="h-4 w-4" />
                     </Button>
                 </form>
             </div>

@@ -13,7 +13,7 @@ export type Course = {
     canvas_id?: number;
     days?: string;
     time?: string;
-    materials?: Material[];
+    course_material?: Material[];
 }
 
 

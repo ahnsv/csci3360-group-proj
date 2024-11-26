@@ -6,7 +6,8 @@ import {
   LifeBuoy,
   MessageCircle,
   Send,
-  Settings2
+  Settings2,
+  Book
 } from "lucide-react"
 import * as React from "react"
 
@@ -70,6 +71,11 @@ const data = {
       //     url: "#",
       //   },
       // ],
+    },
+    {
+      title: "Coursework",
+      url: "/coursework",
+      icon: Book,
     },
     {
       title: "Chat",

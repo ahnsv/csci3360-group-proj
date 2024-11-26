@@ -30,6 +30,10 @@ const navMain = [
         title: "Settings",
         url: "/settings",
     },
+    {
+        title: "Coursework",
+        url: "/coursework",
+    },
 ]
 
 
@@ -49,7 +53,6 @@ export default async function Layout({
     const headersList = headers();
     const pathname = headersList.get('x-current-path');
     
-    // Match against navMain
     const currentNav = navMain.find(item => 
       item.url === pathname
     );

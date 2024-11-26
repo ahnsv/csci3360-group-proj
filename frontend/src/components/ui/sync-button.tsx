@@ -12,7 +12,7 @@ export default function SyncButton({ accessToken }: { accessToken: string }) {
   const handleSync = async () => {
     setIsSyncing(true)
     try {
-      const response = await fetch(`${API_URL}/canvas/sync`, {
+      const response = await fetch(`${API_URL}/jobs/course-sync`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`

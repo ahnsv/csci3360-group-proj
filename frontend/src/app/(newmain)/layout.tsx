@@ -1,18 +1,17 @@
-import { AppSidebar } from "@/components/app-sidebar-v2"
+import { AppSidebar } from "@/components/app-sidebar-v2";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+  BreadcrumbList
+} from "@/components/ui/breadcrumb";
+import { JobsNotification } from "@/components/ui/jobs-notification";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -46,6 +45,7 @@ export default async function Layout({
 }) {
     const supabase = createServerSupabaseClient();
     const { data: {user} } = await supabase.auth.getUser();
+    const {data: {session}} = await supabase.auth.getSession();
     if (!user) {
         redirect("/signin");
     }
@@ -56,7 +56,6 @@ export default async function Layout({
     const currentNav = navMain.find(item => 
       item.url === pathname
     );
-    console.log({currentNav});
 
     return (
     <SidebarProvider defaultOpen={false}>
@@ -77,6 +76,9 @@ export default async function Layout({
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
+          </div>
+          <div className="flex items-center gap-2 ml-auto mr-4">
+            <JobsNotification accessToken={session?.access_token} />
           </div>
         </header>
         {children}

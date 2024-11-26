@@ -47,6 +47,8 @@ export function useGoogleAuth(redirectPath: string, supabaseAccessToken: string)
             access_token: supabaseAccessToken,
             redirect_uri: redirectUri
         }))
+        const currentStep = new URLSearchParams(window.location.search).get('step') || '1'
+        const redirectUrl = `${redirectUri}?step=${currentStep}`
         window.location.href = `${API_URL}/auth/google/authorize?state=${encodeURIComponent(state)}`
     }
 

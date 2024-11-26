@@ -15,24 +15,25 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { checkRequiredIntegrations } from "../_api/chat";
 
 const navMain = [
-    {
-        title: "Dashboard",
-        url: "/dashboard",
-    },
-    {
-        title: "Chat",
-        url: "/chat",
-    },
-    {
-        title: "Settings",
-        url: "/settings",
-    },
-    {
-        title: "Coursework",
-        url: "/coursework",
-    },
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+  },
+  {
+    title: "Chat",
+    url: "/chat",
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+  },
+  {
+    title: "Coursework",
+    url: "/coursework",
+  },
 ]
 
 
@@ -43,21 +44,27 @@ export default async function Layout({
   children: React.ReactNode;
   params: { segments: string[] };
 }) {
-    const supabase = createServerSupabaseClient();
-    const { data: {user} } = await supabase.auth.getUser();
-    const {data: {session}} = await supabase.auth.getSession();
-    if (!user) {
-        redirect("/signin");
-    }
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!user) {
+    redirect("/signin");
+  }
 
-    const headersList = headers();
-    const pathname = headersList.get('x-current-path');
-    
-    const currentNav = navMain.find(item => 
-      item.url === pathname
-    );
+  const { error } = await checkRequiredIntegrations(session?.access_token);
+  if (error) {
+    console.error(error);
+    redirect("/onboard");
+  }
 
-    return (
+  const headersList = headers();
+  const pathname = headersList.get('x-current-path');
+
+  const currentNav = navMain.find(item =>
+    item.url === pathname
+  );
+
+  return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar user={{
         name: user.user_metadata.name ?? user.email ?? "",
@@ -84,5 +91,5 @@ export default async function Layout({
         {children}
       </SidebarInset>
     </SidebarProvider>
-    )
+  )
 }

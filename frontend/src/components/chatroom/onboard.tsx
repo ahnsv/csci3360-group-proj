@@ -6,17 +6,45 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useGoogleAuth } from "@/hooks/useGoogleAuth"
-import { Calendar, Check, Loader2, Sun, Moon, Clock, ChevronRight } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { Calendar, Check, Loader2, Sun, Moon, Clock } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import { cn } from '@/lib/utils'
 
 export default function OnboardingSteps({accessToken}: { accessToken: string }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [currentStep, setCurrentStep] = useState(0)
     const [canvasApiToken, setCanvasApiToken] = useState("")
-    const {isConnected, isLoading, error, connectGoogleCalendar} = useGoogleAuth('/onboard', accessToken)
     const [chronotype, setChronotype] = useState<'morning' | 'night'>('morning')
+    const {isConnected, isLoading, error, connectGoogleCalendar} = useGoogleAuth('/onboard', accessToken)
+    const {isLoading: canvasLoading, error: canvasError, execute: canvasConnect} = useCanvasConnect()
+
+    // Track completion status for each step
+    const [stepsCompleted, setStepsCompleted] = useState({
+        welcome: false,
+        calendar: false,
+        canvas: false,
+        preference: false
+    })
+
+    // Initialize step from URL query param
+    useEffect(() => {
+        const step = searchParams.get('step')
+        if (step) {
+            const stepNumber = parseInt(step)
+            if (stepNumber >= 0 && stepNumber <= 4) {
+                setCurrentStep(stepNumber)
+            }
+        }
+    }, [searchParams])
+
+    // Update URL when step changes
+    useEffect(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.set('step', currentStep.toString())
+        window.history.replaceState({}, '', url.toString())
+    }, [currentStep])
 
     const steps = [
         {title: "Welcome", description: "Start your onboarding process"},
@@ -25,8 +53,24 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
         {title: "Study Preference", description: "Set your study time"},
         {title: "All Set!", description: "You're ready to go"},
     ]
-    const {isLoading: canvasLoading, error: canvasError, execute: canvasConnect} = useCanvasConnect();
 
+    // Check if current step can proceed
+    const canProceed = () => {
+        switch (currentStep) {
+            case 0:
+                return true // Welcome step can always proceed
+            case 1:
+                return isConnected // Google Calendar must be connected
+            case 2:
+                return stepsCompleted.canvas // Canvas API must be connected
+            case 3:
+                return chronotype !== null // Study preference must be selected
+            case 4:
+                return true // Final step can always proceed
+            default:
+                return false
+        }
+    }
 
     const handleCanvasApiConnect = async () => {
         try {
@@ -39,12 +83,23 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
             });
 
             if (success) {
-                setCurrentStep(currentStep + 1);
+                setStepsCompleted(prev => ({...prev, canvas: true}))
+                setCurrentStep(currentStep + 1)
             } else {
-                throw new Error(message || 'Failed to connect to Canvas API');
+                throw new Error(message || 'Failed to connect to Canvas API')
             }
         } catch (error) {
-            console.error('Error connecting to Canvas API:', error);
+            console.error('Error connecting to Canvas API:', error)
+        }
+    }
+
+    const handleNext = () => {
+        if (canProceed()) {
+            if (currentStep === steps.length - 1) {
+                router.push('/')
+            } else {
+                setCurrentStep(prev => prev + 1)
+            }
         }
     }
 
@@ -53,9 +108,8 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
             case 0:
                 return (
                     <div className="text-center">
-                        <h2 className="text-2xl font-bold mb-4">Welcome to Our SaaS Platform</h2>
+                        <h2 className="text-2xl font-bold mb-4">Welcome!</h2>
                         <p className="mb-4">Let's get you set up with your calendar and course information.</p>
-                        <Button onClick={() => setCurrentStep(currentStep + 1)}>Get Started</Button>
                     </div>
                 )
             case 1:
@@ -69,7 +123,6 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                             <div>
                                 <Check className="mx-auto h-8 w-8 text-green-500 mb-2"/>
                                 <p className="text-green-600 mb-4">Google Calendar connected successfully!</p>
-                                <Button onClick={() => setCurrentStep(currentStep + 1)}>Next Step</Button>
                             </div>
                         ) : (
                             <>
@@ -85,13 +138,14 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                 return (
                     <div className="text-center">
                         <h2 className="text-2xl font-bold mb-4">Connect Canvas API</h2>
-                        <p className="mb-4">Enter your Canvas API token to access your course information.</p>
-                        <div className="mb-4 p-4 border-l-4 border-red-500 bg-red-100 text-red-700">
-                            <strong>Note:</strong> You can find your Canvas API token in your Canvas account settings under "Account" &gt; "Settings" &gt; "Approved Integrations" &gt; "New Access Token"
-                        </div>
+                        <Button variant="outline" className="mb-4" onClick={() => {
+                            window.open('https://bostoncollege.instructure.com/profile/settings#access_tokens', '_blank')
+                        }}>
+                            Get Canvas Token
+                        </Button>
                         <div className="flex flex-col items-center space-y-4">
                             <div className="w-full max-w-sm">
-                                <Label htmlFor="api-token">Canvas API Token</Label>
+                                {/* <Label htmlFor="api-token" className="text-left">Canvas API Token</Label> */}
                                 <Input
                                     id="api-token"
                                     type="password"
@@ -124,7 +178,10 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                         <p className="text-gray-600 mb-6">This helps us tailor your experience.</p>
                         <div className="flex justify-between items-center bg-gray-100 rounded-lg p-2 mb-4">
                             <button
-                                onClick={() => setChronotype('morning')}
+                                onClick={() => {
+                                    setChronotype('morning')
+                                    setStepsCompleted(prev => ({...prev, preference: true}))
+                                }}
                                 className={cn(
                                     "flex-1 flex flex-col items-center space-y-2 p-4 rounded-lg transition-all duration-200",
                                     chronotype === 'morning' ? "bg-yellow-100 shadow-md" : "hover:bg-gray-200"
@@ -134,7 +191,10 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                                 <span className="font-medium">Early Bird</span>
                             </button>
                             <button
-                                onClick={() => setChronotype('night')}
+                                onClick={() => {
+                                    setChronotype('night')
+                                    setStepsCompleted(prev => ({...prev, preference: true}))
+                                }}
                                 className={cn(
                                     "flex-1 flex flex-col items-center space-y-2 p-4 rounded-lg transition-all duration-200",
                                     chronotype === 'night' ? "bg-indigo-100 shadow-md" : "hover:bg-gray-200"
@@ -152,9 +212,6 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                                     : "We'll keep evening slots open for you"}
                             </span>
                         </div>
-                        <Button onClick={() => setCurrentStep(currentStep + 1)} className="mt-4">
-                            Continue
-                        </Button>
                     </div>
                 )
             case 4:
@@ -163,12 +220,6 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                         <h2 className="text-2xl font-bold mb-4">All Set!</h2>
                         <p className="mb-4">You've successfully connected your accounts.</p>
                         <Check className="mx-auto h-16 w-16 text-green-500"/>
-                        <Button onClick={() => {
-                            console.log("Onboarding complete!");
-                            router.push('/')
-                        }} className="mt-4">
-                            Go to Dashboard
-                        </Button>
                     </div>
                 )
             default:
@@ -214,16 +265,16 @@ export default function OnboardingSteps({accessToken}: { accessToken: string }) 
                 <CardFooter className="flex justify-between">
                     <Button
                         variant="outline"
-                        onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                        onClick={() => setCurrentStep(prev => prev - 1)}
                         disabled={currentStep === 0}
                     >
                         Previous
                     </Button>
                     <Button
-                        onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
-                        disabled={currentStep === steps.length - 1}
+                        onClick={handleNext}
+                        disabled={!canProceed()}
                     >
-                        Next
+                        {currentStep === steps.length - 1 ? 'Go to Dashboard' : 'Next'}
                     </Button>
                 </CardFooter>
             </Card>

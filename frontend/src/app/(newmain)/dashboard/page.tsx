@@ -21,7 +21,6 @@ const getCourseList: (accessToken: string) => Promise<Course[]> = async (accessT
       headers: {
         'Authorization': `Bearer ${accessToken}`
       },
-      cache: 'force-cache',
       signal: controller.signal
     });
     clearTimeout(timeoutId);

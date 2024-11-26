@@ -41,10 +41,13 @@ const defaultValues: Partial<IntegrationFormValues> = {
 const getMyPreference = async () => {
     const supabase = createSupabaseClient()
     const { data: { user }} = await supabase.auth.getUser()
+    if (!user) {
+        return undefined
+    }
     const { data, error } = await supabase
         .from("preference")
         .select("id")
-        .eq("user_id", user?.id)
+        .eq("user_id", user.id)
         .single()
     if (error) {
         throw error
@@ -88,6 +91,14 @@ export default function IntegrationForm() {
     async function onSubmit(data: IntegrationFormValues) {
         const supabase = createSupabaseClient()
         const { data: { user }} = await supabase.auth.getUser()
+        if (!user) {
+            toast({
+                title: "Error",
+                description: "Failed to update user preference",
+                variant: "destructive"
+            })
+            return
+        }
 
         const { error: userError } = await supabase
             .from("preference")

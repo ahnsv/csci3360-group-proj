@@ -9,6 +9,8 @@ import { API_URL } from "@/app/_api/constants";
 import { redirect } from "next/navigation";
 import CourseCard from "@/components/ui/course-card";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const getCourseList: (accessToken: string) => Promise<Course[]> = async (accessToken: string) => {
   const controller = new AbortController();
@@ -73,13 +75,25 @@ export default async function Page() {
         </div>
         <div className="min-h-[100vh] flex-1 rounded-xl md:min-h-min my-2" >
           <ScrollArea className="w-full whitespace-nowrap my-2">
-            <div className="flex space-x-4 pb-4">
-              {courses.map((course) => (
-                <div key={course.id} className="flex-none w-[400px]">
-                  <CourseCard courseInfo={course} />
+            {courses.length > 0 ? (
+              <div className="flex space-x-4 pb-4">
+                {courses.map((course) => (
+                  <div key={course.id} className="flex-none w-[400px]">
+                    <CourseCard courseInfo={course} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex justify-center items-center p-8">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold mb-2">No Courses Found</h3>
+                  <p className="text-muted-foreground mb-4">You haven't added any courses yet.</p>
+                  <Button asChild>
+                    <Link href="/coursework">Go to Coursework</Link>
+                  </Button>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>

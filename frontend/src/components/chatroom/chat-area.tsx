@@ -9,6 +9,7 @@ import { ChevronDown, Loader2, Send } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import AssignmentQuizCard, { Assignment } from "./assignment-quiz-card"
 import ChatBubble from "./chat-bubble"
+import MessageStarter from "./message-starter"
 
 type ChatAction = {
     name: string
@@ -63,6 +64,7 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
     const [showScrollButton, setShowScrollButton] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const viewportRef = useRef<HTMLDivElement>(null);
+    const [isStarterOpen, setIsStarterOpen] = useState(false);
 
     useEffect(() => {
         getChatMessages(accessToken).then(setChatMessages);
@@ -143,12 +145,23 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
             
             {showScrollButton && <ScrollToBottomButton onClick={scrollToBottom} />}
             
-            <div className="px-4 border-t border-gray-200 flex-1 h-24 p-2">
-                <form className="flex items-center" onSubmit={handleSubmit}>
+            <div className="px-4 border-t border-gray-200">
+                <form className="flex items-center h-16 gap-2" onSubmit={handleSubmit}>
+                    <div className="relative">
+                        <MessageStarter 
+                            onMessageSelect={(message) => {
+                                setInputMessage(message);
+                                const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
+                                if (inputElement) inputElement.focus();
+                            }}
+                            isOpen={isStarterOpen}
+                            onToggle={() => setIsStarterOpen(!isStarterOpen)}
+                        />
+                    </div>
                     <Input 
                         type="text" 
                         placeholder="Type your message..." 
-                        className="flex-grow mr-2"
+                        className="flex-grow text-sm"
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         disabled={isLoading}

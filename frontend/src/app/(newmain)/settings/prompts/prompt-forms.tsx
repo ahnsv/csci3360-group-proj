@@ -14,7 +14,10 @@ import { useEffect, useState } from "react"
 async function getPrompts() {
   const supabase = createSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const { data, error } = await supabase.from("preference").select("id, task_extraction_prompt, scheduling_prompt").eq("user_id", user?.id).single()
+  if (!user) {
+    return undefined
+  }
+  const { data, error } = await supabase.from("preference").select("id, task_extraction_prompt, scheduling_prompt").eq("user_id", user.id).single()
   if (error) {
     throw error
   }
@@ -60,11 +63,13 @@ function PromptForm() {
     async function loadPrompts() {
       try {
         const data = await getPrompts()
-        setPreferenceId(data.id)
-        form.reset({
-          taskExtractionPrompt: data.task_extraction_prompt || "",
-          schedulingPrompt: data.scheduling_prompt || ""
-        })
+        if (data) {
+          setPreferenceId(data.id.toString())
+          form.reset({
+            taskExtractionPrompt: data.task_extraction_prompt || "",
+            schedulingPrompt: data.scheduling_prompt || ""
+          })
+        }
       } catch (error) {
         toast({
           title: "Error loading prompts",
@@ -80,7 +85,7 @@ function PromptForm() {
   async function onSubmit(data: PromptFormValues) {
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from("preference").upsert({
-      id: preferenceId,
+      id: Number(preferenceId),
       user_id: user?.id,
       task_extraction_prompt: data.taskExtractionPrompt,
       scheduling_prompt: data.schedulingPrompt

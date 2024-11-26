@@ -57,7 +57,7 @@ class Integration(Base):
     )
     refresh_token = Column(String, nullable=True)
 
-    profile = relationship("Profiles", back_populates="integrations")
+    profile = relationship("Profiles", back_populates="integrations", lazy="selectin")
 
     def __repr__(self):
         return f"<Integration(id={self.id}, type='{self.type}', user_id='{self.user_id}', created_at='{self.created_at}')>"
@@ -243,3 +243,40 @@ class Preference(Base):
 
     def __repr__(self):
         return f"<Preference(id={self.id}, user_id='{self.user_id}', study_type='{self.study_type}')>"
+
+
+class JobStatus(enum.Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+class JobType(enum.Enum):
+    COURSE_SYNC = "COURSE_SYNC"
+
+class Job(Base):
+    __tablename__ = "job"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    type = Column(Enum(JobType, name="job_type"), nullable=False)
+    status = Column(Enum(JobStatus, name="job_status"), nullable=False, default=JobStatus.PENDING)
+    error_message = Column(Text, nullable=True)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    profile = relationship("Profiles", lazy="selectin")
+
+    def __repr__(self):
+        return f"<Job(id={self.id}, type='{self.type}', status='{self.status}', user_id='{self.user_id}')>"

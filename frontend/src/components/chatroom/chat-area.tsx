@@ -75,6 +75,8 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+
         setIsLoading(true);
         scrollToBottom();
         setChatMessages((prev) => [...prev, {
@@ -167,13 +169,6 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            toast({
-                                                title: "Coming Soon",
-                                                description: "RAG mode is a coming soon feature!",
-                                            })
-                                        }}
                                         className="h-8 w-8"
                                     >
                                         <FlaskConical className="h-4 w-4" />
@@ -190,7 +185,9 @@ const ChatArea = ({ accessToken }: { accessToken: string }) => {
                         placeholder="Type your message..."
                         className="flex-grow text-sm"
                         value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
+                        onChange={(e) => {
+                            setInputMessage(e.target.value)
+                        }}
                         disabled={isLoading}
                     />
                     <Button type="submit" size="icon" disabled={isLoading}>

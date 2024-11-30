@@ -74,6 +74,18 @@ def get_course_module_items(
     return response.json()
 
 
+def get_course_file_url(
+    canvas_api_url: str, canvas_api_key: str, course_id: str, file_id: str
+):
+    import requests
+
+    response = requests.get(
+        f"{canvas_api_url}/api/v1/courses/{course_id}/files/{file_id}",
+        headers={"Authorization": f"Bearer {canvas_api_key}"},
+    )
+    return response.json()
+
+
 async def extract_course_content(
     canvas_api_url: str, canvas_api_key: str, db_session: AsyncDBSession, user_id: str
 ):
@@ -92,18 +104,26 @@ async def extract_course_content(
             all_module_items.extend(module_items)
 
         stmt = insert(Course).values(
-            name=details.name, instructor=instructors, code=details.course_code, canvas_id=course.id
+            name=details.name,
+            instructor=instructors,
+            code=details.course_code,
+            canvas_id=course.id,
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=[Course.name],
-            set_=dict(instructor=instructors, code=details.course_code, canvas_id=course.id, updated_at=func.now()),
+            set_=dict(
+                instructor=instructors,
+                code=details.course_code,
+                canvas_id=course.id,
+                updated_at=func.now(),
+            ),
         )
         stmt = stmt.returning(Course)
         result = await db_session.execute(stmt)
         course = result.scalar_one_or_none()
         if not course:
             raise Exception("Course not found")
-        
+
         stmt = insert(CourseMembership).values(course_id=course.id, user_id=user_id)
         stmt = stmt.on_conflict_do_nothing()
         stmt = stmt.returning(CourseMembership)
@@ -115,7 +135,8 @@ async def extract_course_content(
         course_materials = []
         for file in files:
             course_material_type = (
-                CourseMaterialType.PDF if file["display_name"].endswith(".pdf")
+                CourseMaterialType.PDF
+                if file["display_name"].endswith(".pdf")
                 else CourseMaterialType.URL
             )
             url = file.get("url")
@@ -130,16 +151,29 @@ async def extract_course_content(
 
         for module_item in all_module_items:
             course_material_type = (
-                CourseMaterialType.PDF if module_item["title"].endswith(".pdf")
+                CourseMaterialType.PDF
+                if module_item["title"].endswith(".pdf")
                 else CourseMaterialType.URL
             )
-            url = module_item.get("url")
+            content_id = module_item.get("content_id")
+            if not content_id:
+                continue
+
+            file = get_course_file_url(
+                canvas_api_url, canvas_api_key, course.canvas_id, content_id
+            )
+            if file.get('errors'):
+                continue
+
+            if not bool([file.get("url"), file.get("display_name"), file.get("id")]):
+                continue
+
             course_material = {
                 "course_id": course.id,
                 "type": course_material_type,
-                "url": url,
-                "name": module_item["title"],
-                "canvas_id": f"module_item_{module_item['id']}",
+                "url": file.get("url"),
+                "name": file.get("display_name"),
+                "canvas_id": f"file_{file.get('id')}",
             }
             course_materials.append(course_material)
 
@@ -149,13 +183,21 @@ async def extract_course_content(
 
         # make sure course_materials are unique
         course_materials = list(
-            {course_material["name"]: course_material for course_material in course_materials}.values()
+            {
+                course_material["name"]: course_material
+                for course_material in course_materials
+            }.values()
         )
 
         stmt = insert(CourseMaterial).values(course_materials)
         stmt = stmt.on_conflict_do_update(
             index_elements=[CourseMaterial.name, CourseMaterial.course_id],
-            set_=dict(url=stmt.excluded.url, type=stmt.excluded.type, canvas_id=stmt.excluded.canvas_id, updated_at=func.now()),
+            set_=dict(
+                url=stmt.excluded.url,
+                type=stmt.excluded.type,
+                canvas_id=stmt.excluded.canvas_id,
+                updated_at=func.now(),
+            ),
         )
         stmt = stmt.returning(CourseMaterial)
         result = await db_session.execute(stmt)

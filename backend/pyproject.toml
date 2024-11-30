@@ -22,6 +22,9 @@ canvasapi = "^3.3.0"
 langchain-core = "^0.3.19"
 langchain-openai = "^0.2.9"
 langgraph = "^0.2.52"
+pgvector = "^0.3.6"
+nltk = "^3.9.1"
+pypdf2 = "^3.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

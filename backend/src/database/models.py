@@ -7,17 +7,18 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
-    SmallInteger,
     String,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
 
-Base = declarative_base()
+
+class Base(AsyncAttrs, DeclarativeBase):
+    pass
 
 
 class Profiles(Base):
@@ -84,8 +85,14 @@ class Chat(Base):
     )
     content = Column(String, nullable=True)
     # extra = Column(J, nullable=True)  # Using Text for JSONB representation
+    chatroom_id = Column(
+        BigInteger,
+        ForeignKey("chatroom.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     profile = relationship("Profiles")
+    chatroom = relationship("Chatroom", back_populates="messages")
 
     def __repr__(self):
         return f"<Chat(id={self.id}, user_id='{self.user_id}', author='{self.author}', created_at='{self.created_at}')>"
@@ -235,10 +242,10 @@ class Preference(Base):
         UUID(as_uuid=True),
         ForeignKey("profiles.id", onupdate="CASCADE", ondelete="CASCADE"),
         nullable=True,
-        unique=True
+        unique=True,
     )
     task_extraction_prompt = Column(Text, nullable=True)
-    scheduling_prompt = Column(Text, nullable=True) 
+    scheduling_prompt = Column(Text, nullable=True)
     primary_calendar = Column(Text, nullable=True)
 
     def __repr__(self):
@@ -251,8 +258,10 @@ class JobStatus(enum.Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+
 class JobType(enum.Enum):
     COURSE_SYNC = "COURSE_SYNC"
+
 
 class Job(Base):
     __tablename__ = "job"
@@ -268,7 +277,9 @@ class Job(Base):
         onupdate=func.now(),
     )
     type = Column(Enum(JobType, name="job_type"), nullable=False)
-    status = Column(Enum(JobStatus, name="job_status"), nullable=False, default=JobStatus.PENDING)
+    status = Column(
+        Enum(JobStatus, name="job_status"), nullable=False, default=JobStatus.PENDING
+    )
     error_message = Column(Text, nullable=True)
     user_id = Column(
         UUID(as_uuid=True),
@@ -280,3 +291,71 @@ class Job(Base):
 
     def __repr__(self):
         return f"<Job(id={self.id}, type='{self.type}', status='{self.status}', user_id='{self.user_id}')>"
+
+
+class ChatroomType(enum.Enum):
+    DIRECT = "DIRECT"
+    GROUP = "GROUP"
+    COURSE = "COURSE"
+
+
+class Chatroom(Base):
+    __tablename__ = "chatroom"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    name = Column(String, nullable=True)  # Nullable for direct chats
+    type = Column(Enum(ChatroomType, name="chatroom_type"), nullable=False)
+    course_id = Column(
+        BigInteger,
+        ForeignKey("course.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )  # Only for course-related chatrooms
+
+    # Relationships
+    course = relationship("Course", lazy="selectin")
+    members = relationship("ChatroomMember", back_populates="chatroom")
+    messages = relationship("Chat", back_populates="chatroom")
+
+    def __repr__(self):
+        return f"<Chatroom(id={self.id}, name='{self.name}', type='{self.type}')>"
+
+
+class ChatroomMember(Base):
+    __tablename__ = "chatroom_member"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    chatroom_id = Column(
+        BigInteger,
+        ForeignKey("chatroom.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("profiles.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
+    )
+    is_admin = Column(Boolean, nullable=False, default=False)
+
+    # Relationships
+    chatroom = relationship("Chatroom", back_populates="members")
+    profile = relationship("Profiles", lazy="selectin")
+    
+
+    __table_args__ = (
+        UniqueConstraint("chatroom_id", "user_id", name="unique_chatroom_member"),
+    )
+
+    def __repr__(self):
+        return f"<ChatroomMember(chatroom_id={self.chatroom_id}, user_id='{self.user_id}', is_admin={self.is_admin})>"

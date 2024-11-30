@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarNav } from "@/components/ui/sidebar-nav"
 import { AuthProvider } from "@/contexts/AuthContext"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 
 export const metadata: Metadata = {
     title: "Forms",
@@ -42,9 +43,12 @@ export default async function SettingsLayout({ children }: SettingsLayoutProps) 
     const supabase = createServerSupabaseClient()
     const { data: { session } } = await supabase.auth.getSession()
     const accessToken = session?.access_token || ""
+    if (!session) {
+        redirect('/signin')
+    }
 
     return (
-        <AuthProvider accessToken={accessToken}>
+        <AuthProvider accessToken={accessToken} user={session.user}>
             <div className="hidden space-y-6 p-10 pb-16 md:block">
                 <div className="space-y-0.5">
                     <h2 className="text-2xl font-bold tracking-tight">Settings</h2>

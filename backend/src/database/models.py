@@ -375,7 +375,11 @@ class MaterialDocument(Base):
         ForeignKey("course.id", onupdate="CASCADE", ondelete="CASCADE"),
         nullable=True,
     )
-    course_material_id = Column(BigInteger, nullable=True)
+    course_material_id = Column(
+        BigInteger,
+        ForeignKey("course_material.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
 
     course_material = relationship(
         "CourseMaterial", back_populates="documents", lazy="selectin"

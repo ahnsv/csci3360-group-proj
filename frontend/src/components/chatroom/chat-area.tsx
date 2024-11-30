@@ -1,202 +1,152 @@
 "use client"
 
-import { getChatMessages, talkToAgent } from '@/app/_api/chat'
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { ChevronDown, Loader2, Send, Beaker, FlaskConical } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import AssignmentQuizCard, { Assignment } from "./assignment-quiz-card"
-import ChatBubble from "./chat-bubble"
-import MessageStarter from "./message-starter"
-import { useToast } from "@/hooks/use-toast"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useRef, useState } from 'react';
+import { ScrollArea } from '../ui/scroll-area';
+import ChatBubble from './chat-bubble';
+import { Button } from '../ui/button';
+import { Send } from 'lucide-react';
+import { Textarea } from '../ui/textarea';
+import { API_URL } from '@/app/_api/constants';
 
-type ChatAction = {
-    name: string
-    value: string
-    type: "button" | "link"
+interface Message {
+    id: number;
+    chatroom_id: number;
+    author: 'user' | 'agent';
+    message: string;
+    sent_at: string;
+    actions?: {
+        name: string;
+        value: string;
+        type: "button" | "link";
+    }[];
 }
 
-type ToolInvocation = {
-    name: string
-    result: Record<string, unknown>
-    state: "result" | "failure"
+interface ChatAreaProps {
+    chatroomId: number | null;
 }
 
-type ChatMessage = {
-    author: string
-    message: string
-    sent_at: Date
-    actions?: ChatAction[]
-    toolInvocations?: ToolInvocation[]
-}
-
-function ScrollToBottomButton({ onClick }: { onClick: () => void }) {
-    return (
-        <Button
-            variant="secondary"
-            size="icon"
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full shadow-lg transition-opacity duration-500"
-            onClick={onClick}
-            aria-label="Scroll to bottom"
-            id="scroll-to-bottom-button"
-            style={{
-                opacity: 1,
-                animation: 'fade 500ms ease-in-out'
-            }}
-        >
-            <ChevronDown className="h-4 w-4" />
-            <style jsx>{`
-                @keyframes fade {
-                    0% { opacity: 0; }
-                    100% { opacity: 1; }
-                }
-            `}</style>
-        </Button>
-    )
-}
-
-
-const ChatArea = ({ accessToken }: { accessToken: string }) => {
-    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-    const [inputMessage, setInputMessage] = useState('');
+export default function ChatArea({ chatroomId }: ChatAreaProps) {
+    const { accessToken, user } = useAuth();
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [showScrollButton, setShowScrollButton] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
-    const viewportRef = useRef<HTMLDivElement>(null);
-    const [isStarterOpen, setIsStarterOpen] = useState(false);
-    const { toast } = useToast();
 
     useEffect(() => {
-        getChatMessages(accessToken).then(setChatMessages);
-    }, [accessToken]);
+        if (!chatroomId) {
+            setMessages([]);
+            return;
+        }
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+        const fetchMessages = async () => {
+            try {
+                const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/chats`, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch messages');
+
+                const data = await response.json();
+                setMessages(data);
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
+        };
+
+        fetchMessages();
+    }, [chatroomId, accessToken]);
+
+    useEffect(() => {
+        // Scroll to bottom when messages change
+        if (scrollAreaRef.current) {
+            scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+        }
+    }, [messages]);
+
+    const handleSendMessage = async () => {
+        if (!input.trim() || !chatroomId || isLoading) return;
 
         setIsLoading(true);
-        scrollToBottom();
-        setChatMessages((prev) => [...prev, {
-            author: 'user',
-            message: inputMessage,
-            sent_at: new Date(),
-        }]);
-        talkToAgent(accessToken, inputMessage).then((msg) => {
-            setChatMessages((prev) => [...prev, msg]);
-        })
-            .catch(() => {
-                setChatMessages((prev) => [...prev, {
-                    author: 'agent',
-                    message: 'Sorry, I\'m having trouble processing your message. Please try again later.',
-                    sent_at: new Date(),
-                }]);
-            })
-            .finally(() => {
-                setIsLoading(false);
+        try {
+            const response = await fetch(`${API_URL}/chatrooms/${chatroomId}/messages`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: input.trim(),
+                    user_id: user.id
+                })
             });
-        setInputMessage('');
-    };
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const { scrollTop, scrollHeight, clientHeight } = e.target as HTMLDivElement;
-        setShowScrollButton(scrollTop + clientHeight < scrollHeight - 20);
-    };
+            if (!response.ok) throw new Error('Failed to send message');
 
-    const scrollToBottom = () => {
-        if (scrollAreaRef.current) {
-            scrollAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            const newMessage = await response.json();
+            setMessages(prev => [...prev, newMessage]);
+            setInput('');
+        } catch (error) {
+            console.error('Error sending message:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    };
+
+    if (!chatroomId) {
+        return (
+            <div className="flex-1 flex items-center justify-center text-gray-500">
+                Select a chat or start a new conversation
+            </div>
+        );
+    }
+
     return (
-        <div className="flex flex-col h-full bg-white relative">
-            <ScrollArea
-                className="h-[calc(100vh-8rem)] p-4"
-                onScrollCapture={handleScroll}
-            >
-                <div className="h-full" ref={scrollAreaRef}>
-                    {chatMessages.map((msg, index) => {
-                        const hasAssignmentTool = msg.toolInvocations?.some(
-                            tool => tool.name === "get_upcoming_assignments_and_quizzes_tool" &&
-                                tool.state === "result"
-                        );
-
-                        if (hasAssignmentTool && msg.toolInvocations) {
-                            const assignments = msg.toolInvocations.find(
-                                tool => tool.name === "get_upcoming_assignments_and_quizzes_tool"
-                            )?.result?.assignments;
-                            return <AssignmentQuizCard key={index} accessToken={accessToken} assignments={assignments as Assignment[]} />;
-                        }
-
-                        return <ChatBubble key={index} message={msg} />;
-                    })}
-                    {isLoading && (
-                        <div className="flex items-start mb-4">
-                            <Avatar className="mr-2">
-                                <AvatarImage alt="AI" />
-                                <AvatarFallback>AI</AvatarFallback>
-                            </Avatar>
-                            <div className="rounded-lg p-2 bg-gray-200 flex items-center">
-                                <Loader2 className="h-4 w-4 animate-spin text-gray-500 mr-2" />
-                                <span>Thinking...</span>
-                            </div>
-                        </div>
-                    )}
+        <div className="flex-1 flex flex-col h-full">
+            <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+                <div className="space-y-4">
+                    {messages.map((message) => (
+                        <ChatBubble
+                            key={message.id}
+                            message={{
+                                author: message.author,
+                                message: message.message,
+                                sent_at: new Date(message.sent_at),
+                                actions: message.actions
+                            }}
+                        />
+                    ))}
                 </div>
             </ScrollArea>
-
-            {showScrollButton && <ScrollToBottomButton onClick={scrollToBottom} />}
-
-            <div className="px-4 border-t border-gray-200">
-                <form className="flex items-center h-16 gap-2" onSubmit={handleSubmit}>
-                    <div className="relative flex gap-2 items-center">
-                        <MessageStarter
-                            onMessageSelect={(message) => {
-                                setInputMessage(message);
-                                const inputElement = document.querySelector('input[type="text"]') as HTMLInputElement;
-                                if (inputElement) inputElement.focus();
-                            }}
-                            isOpen={isStarterOpen}
-                            onToggle={() => setIsStarterOpen(!isStarterOpen)}
-                        />
-
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                    >
-                                        <FlaskConical className="h-4 w-4" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Enable RAG mode</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                    <Input
-                        type="text"
-                        placeholder="Type your message..."
-                        className="flex-grow text-sm"
-                        value={inputMessage}
-                        onChange={(e) => {
-                            setInputMessage(e.target.value)
-                        }}
+            
+            <div className="p-4 border-t">
+                <div className="flex gap-2">
+                    <Textarea
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Type a message..."
+                        className="min-h-[60px] max-h-[200px]"
                         disabled={isLoading}
                     />
-                    <Button type="submit" size="icon" disabled={isLoading}>
+                    <Button 
+                        onClick={handleSendMessage}
+                        disabled={!input.trim() || isLoading}
+                        className="px-4"
+                    >
                         <Send className="h-4 w-4" />
                     </Button>
-                </form>
+                </div>
             </div>
         </div>
     );
-};
-
-export default ChatArea;
+}

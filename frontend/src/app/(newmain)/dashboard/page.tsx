@@ -44,7 +44,7 @@ export default async function Page() {
   const courses = await getCourseList(session.access_token);
 
   return (
-    <AuthProvider accessToken={session.access_token}>
+    <AuthProvider accessToken={session.access_token} user={session.user}>
       <div className="flex flex-1 flex-col gap-4 p-4 pt-0 max-w-[95vw] mx-auto">
         <div className="grid auto-rows-min gap-4 grid-cols-4">
           <div className="grid grid-cols-2 gap-2 col-span-2">

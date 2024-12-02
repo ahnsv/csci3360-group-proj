@@ -1,20 +1,16 @@
 "use client"
 
 import {
-  Command,
+  Book,
   Home,
-  LifeBuoy,
   MessageCircle,
-  Send,
-  Settings2,
-  Book
+  Settings2
 } from "lucide-react"
 import * as React from "react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
+import Image from "next/image"
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +20,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { createSupabaseClient } from "@/lib/supabase/client"
 
 const data = {
   user: {
@@ -129,14 +124,14 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   return (
-    <Sidebar variant="inset" {...props}>
+    <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Command className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground border border-white bg-[#8a100b]">
+                  <Image src="/bc_logo.png" className="size-4" alt="BC Logo" width={32} height={32} />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Aquila</span>

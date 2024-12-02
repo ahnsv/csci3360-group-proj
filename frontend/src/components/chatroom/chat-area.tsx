@@ -111,7 +111,7 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
     }
 
     return (
-        <div className="flex-1 flex flex-col h-full">
+        <div className="flex-1 flex flex-col max-h-[calc(100vh-150px)]">
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
                 <div className="space-y-4">
                     {messages.map((message) => (

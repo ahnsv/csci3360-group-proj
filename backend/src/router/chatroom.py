@@ -268,6 +268,15 @@ async def handle_message(
 
         for message in response["messages"]:
             if isinstance(message, ToolMessage):
+                if message.name == "material_documents_retriever":
+                    tool_invocations.append(
+                        ToolInvocation(
+                            name=message.name,
+                            result=message.content,
+                            state="result",
+                        )
+                    )
+                    continue
                 try:
                     json_loadable_content = json.loads(message.content)
                     tool_invocations.append(

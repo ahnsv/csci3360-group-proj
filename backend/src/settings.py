@@ -38,6 +38,10 @@ class Settings(BaseSettings):
         alias="GCAL_REDIRECT_URI",
     )
 
+    # supabase
+    supabase_url: str
+    supabase_anon_key: str
+
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"), env_prefix="hai_"
     )

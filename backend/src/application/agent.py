@@ -2,8 +2,12 @@ import json
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
+from langchain.tools.retriever import create_retriever_tool
+from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
+from langchain_core.vectorstores import VectorStoreRetriever
+from langchain_openai import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph.graph import CompiledGraph
@@ -64,8 +68,16 @@ def get_or_create_agent(container: ApplicationContainer, user_id: str) -> Compil
             model="gpt-4o-mini", api_key=container.settings.openai_api_key
         )
         tools = create_tools(container, user_id)
+        vector_store_retriever = get_supabase_vector_store_retriever(container)
+        material_retriever_tool = create_retriever_tool(
+            vector_store_retriever,
+            name="material_documents_retriever",
+            description="Retrieve material documents from the database.",
+        )
         memory = MemorySaver()
-        _agent_cache[user_id] = create_react_agent(model, tools, checkpointer=memory)
+        _agent_cache[user_id] = create_react_agent(
+            model, tools + [material_retriever_tool], checkpointer=memory
+        )
     return _agent_cache[user_id]
 
 
@@ -86,7 +98,7 @@ class AgentRequest(BaseModel):
 
 class ToolInvocation(BaseModel):
     name: str
-    result: Optional[dict | str] = None
+    result: Optional[dict | list | str] = None
     state: str
 
 
@@ -127,6 +139,7 @@ async def chat_with_agent(
                               - sync_calendar_tool: Synchronize tasks with Google Calendar.
                               - list_courses_tool: List all Canvas courses.
                               - get_upcoming_assignments_and_quizzes_tool: Get upcoming assignments and quizzes.
+                              - material_documents_retriever: Retrieve material documents from the database.
 
                               By using the tools, you can get information about the user's existing schedules, assignments, and quizzes. 
                               With this information, you can help the user find available time slots for studying.
@@ -187,3 +200,19 @@ async def chat_with_agent(
         )
     finally:
         await db_session.commit()
+
+
+def get_supabase_vector_store_retriever(
+    container: ApplicationContainer,
+) -> VectorStoreRetriever:
+    supabase = container.supabase
+    vector_store = SupabaseVectorStore(
+        client=supabase,
+        table_name="material_documents",
+        query_name="match_documents",
+        embedding=OpenAIEmbeddings(
+            model="text-embedding-ada-002",
+            api_key=container.settings.openai_api_key,
+        ),
+    )
+    return vector_store.as_retriever()

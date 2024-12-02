@@ -8,6 +8,7 @@ from fastapi.security import OAuth2PasswordBearer
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import Resource, build
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from supabase import create_client
 from supabase_auth import AsyncGoTrueClient, User
 from supabase_auth.errors import AuthApiError
 
@@ -26,8 +27,7 @@ class ExternalApiError(Exception):
         return f"{self.__class__.__name__}(status_code={self.status_code}, message={self.message})"
 
 
-class CanvasApiError(ExternalApiError):
-    ...
+class CanvasApiError(ExternalApiError): ...
 
 
 class GoogleCalendarClient:
@@ -40,18 +40,26 @@ class GoogleCalendarClient:
         self.flow.fetch_token(code=code)
         credentials = self.flow.credentials
 
-        service = build('calendar', 'v3', credentials=credentials)
+        service = build("calendar", "v3", credentials=credentials)
         if service is None:
             raise ExternalApiError(401, "Unauthorized")
         self.client = service
 
         return credentials
 
-    async def get_calendar_events(self, calendar_id: str = "primary", time_min: datetime = None,
-                                  time_max: datetime = None) -> list[dict[str, Any]]:
+    async def get_calendar_events(
+        self,
+        calendar_id: str = "primary",
+        time_min: datetime = None,
+        time_max: datetime = None,
+    ) -> list[dict[str, Any]]:
         if self.client is None:
             raise ExternalApiError(401, "Unauthorized")
-        event_list = self.client.events().list(calendarId=calendar_id, timeMin=time_min, timeMax=time_max).execute()
+        event_list = (
+            self.client.events()
+            .list(calendarId=calendar_id, timeMin=time_min, timeMax=time_max)
+            .execute()
+        )
         if event_list is None:
             raise ExternalApiError(401, "Unauthorized")
         return event_list.get("items", [])
@@ -61,8 +69,10 @@ class GoogleCalendarClient:
 class CanvasClient:
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.client = httpx.AsyncClient(base_url=settings.canvas_api_url,
-                                        headers={"Authorization": f"Bearer {settings.canvas_api_token}"})
+        self.client = httpx.AsyncClient(
+            base_url=settings.canvas_api_url,
+            headers={"Authorization": f"Bearer {settings.canvas_api_token}"},
+        )
 
     async def update_api_token(self, token: str):
         self.client.headers["Authorization"] = f"Bearer {token}"
@@ -70,17 +80,26 @@ class CanvasClient:
     async def list_registered_courses(self) -> list[dict[str, Any]]:
         if self.client.headers.get("Authorization") is None:
             raise CanvasApiError(401, "Unauthorized")
-        response = await self.client.get("/api/v1/courses?enrollment_type[]=student&enrollment_state[]=active")
+        response = await self.client.get(
+            "/api/v1/courses?enrollment_type[]=student&enrollment_state[]=active"
+        )
         return response.json()
 
-    async def get_upcoming_tasks(self, n_days: int = 7, start_date: datetime = None, end_date: datetime = None) -> list[
-        dict[str, Any]]:
+    async def get_upcoming_tasks(
+        self, n_days: int = 7, start_date: datetime = None, end_date: datetime = None
+    ) -> list[dict[str, Any]]:
         if start_date is None:
-            start_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=timezone.utc)
+            start_date = (
+                datetime.now()
+                .replace(hour=0, minute=0, second=0, microsecond=0)
+                .replace(tzinfo=timezone.utc)
+            )
         if end_date is None:
-            end_date = (datetime.now() + timedelta(days=n_days)).replace(hour=23, minute=59, second=59,
-                                                                         microsecond=999999).replace(
-                tzinfo=timezone.utc)
+            end_date = (
+                (datetime.now() + timedelta(days=n_days))
+                .replace(hour=23, minute=59, second=59, microsecond=999999)
+                .replace(tzinfo=timezone.utc)
+            )
 
         # if either one of them is not None, we need to fill the other one
         if start_date is not None and end_date is None:
@@ -93,22 +112,26 @@ class CanvasClient:
             end_date_str = end_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         except ValueError as e:
             raise ValueError(f"Error formatting dates: {str(e)}")
-        response = await self.client.get(f"/api/v1/planner/items?start_date={start_date_str}&end_date={end_date_str}")
+        response = await self.client.get(
+            f"/api/v1/planner/items?start_date={start_date_str}&end_date={end_date_str}"
+        )
         if response.status_code != 200:
             raise CanvasApiError(response.status_code, response.text)
         return response.json()
 
 
-
-
 # dependency injection container
 class Container:
     def __init__(self, settings: Settings):
+        from src.application.openai import client as create_openai_client
+
         self.settings = settings
         self.google_calendar_client = GoogleCalendarClient(settings)
         self.canvas_client = CanvasClient(settings=settings)
         async_session = async_sessionmaker(bind=engine)
         self.db_session = async_session()
+        self.openai_client = create_openai_client()
+        self.supabase = create_client(settings.supabase_url, settings.supabase_anon_key)
 
 
 ApplicationContainer = Annotated[Container, Depends(lambda: Container(settings))]
@@ -118,7 +141,7 @@ def get_flow():
     return Flow.from_client_secrets_file(
         settings.client_secrets_file,
         scopes=settings.scopes,
-        redirect_uri=settings.redirect_uri
+        redirect_uri=settings.redirect_uri,
     )
 
 
@@ -140,7 +163,13 @@ reusable_oauth2 = OAuth2PasswordBearer(
 )
 AccessTokenDep = Annotated[str, Depends(reusable_oauth2)]
 
-gotrue_client = AsyncGoTrueClient(url=settings.gotrue_url, headers={"Authorization": f"Bearer {settings.gotrue_anon_key}", "apikey": settings.gotrue_anon_key})
+gotrue_client = AsyncGoTrueClient(
+    url=settings.gotrue_url,
+    headers={
+        "Authorization": f"Bearer {settings.gotrue_anon_key}",
+        "apikey": settings.gotrue_anon_key,
+    },
+)
 
 
 async def get_current_user(access_token: AccessTokenDep) -> User:
@@ -157,7 +186,7 @@ async def get_current_user(access_token: AccessTokenDep) -> User:
         raise HTTPException(status_code=401, detail="Invalid access token")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-        
+
     if not user_rsp:
         # logging.error("User not found")
         raise HTTPException(status_code=404, detail="User not found")

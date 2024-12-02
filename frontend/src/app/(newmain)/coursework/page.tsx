@@ -6,37 +6,24 @@ import SyncButton from "@/components/ui/sync-button"
 import CourseList from "@/components/coursework/course-list"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import CourseDetails from "@/components/coursework/course-details"
+import { AuthProvider } from "@/contexts/AuthContext"
+import { API_URL } from "@/app/_api/constants"
 
-async function getCourseList(supabase: ReturnType<typeof createServerSupabaseClient>) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-        return []
-    }
-    const { data: courses, error } = await supabase
-        .from('course_membership')
-        .select(`
-            course (
-                id,
-                name,
-                code,
-                instructor,
-                link,
-                description,
-                hidden,
-                created_at,
-                updated_at,
-                canvas_id,
-                course_material (*)
-            )
-        `)
-        .eq('user_id', user?.id ?? '')
+async function getCourseList(accessToken: string) {
+    const response = await fetch(`${API_URL}/courses/`, {
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        }
+    })
 
-    if (error) {
-        console.error('Error fetching courses:', error)
+    if (!response.ok) {
+        console.error('Error fetching courses:', response.statusText)
         return []
     }
 
-    return courses.map(c => ({ ...c.course, materials: c.course?.course_material ?? [] })) as unknown as Course[]
+    const courses = await response.json()
+    return courses as Course[]
 }
 
 export default async function CourseworkPage() {
@@ -48,34 +35,36 @@ export default async function CourseworkPage() {
         redirect('/signin')
     }
 
-    const courses = await getCourseList(supabase)
+    const courses = await getCourseList(session.access_token)
 
     return (
-        <div className="h-[calc(100vh-4rem)]">
-            <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={25} minSize={20}>
-                    <div className="flex h-full flex-col text-sm">
-                        <div className="flex items-center justify-between p-4">
-                            <h1 className="text-lg font-semibold">My Courses</h1>
-                            <SyncButton accessToken={session.access_token} />
+        <AuthProvider accessToken={session.access_token} user={session.user}>
+            <div className="h-[calc(100vh-4rem)]">
+                <ResizablePanelGroup direction="horizontal">
+                    <ResizablePanel defaultSize={25} minSize={20}>
+                        <div className="flex h-full flex-col text-sm">
+                            <div className="flex items-center justify-between p-4">
+                                <h1 className="text-lg font-semibold">My Courses</h1>
+                                <SyncButton accessToken={session.access_token} />
+                            </div>
+                            <ScrollArea className="flex-1">
+                                <CourseList courses={courses} />
+                            </ScrollArea>
                         </div>
-                        <ScrollArea className="flex-1">
-                            <CourseList courses={courses} />
-                        </ScrollArea>
-                    </div>
-                </ResizablePanel>
-                <ResizableHandle />
-                <ResizablePanel defaultSize={75}>
-                    <div className="flex h-full flex-col">
-                        <div className="p-4">
-                            <h2 className="text-lg font-semibold">Course Details</h2>
+                    </ResizablePanel>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={75}>
+                        <div className="flex h-full flex-col">
+                            <div className="p-4">
+                                <h2 className="text-lg font-semibold">Course Details</h2>
+                            </div>
+                            <ScrollArea className="flex-1 p-4">
+                                <CourseDetails />
+                            </ScrollArea>
                         </div>
-                        <ScrollArea className="flex-1 p-4">
-                            <CourseDetails />
-                        </ScrollArea>
-                    </div>
-                </ResizablePanel>
-            </ResizablePanelGroup>
-        </div>
+                    </ResizablePanel>
+                </ResizablePanelGroup>
+            </div>
+        </AuthProvider>
     )
 } 

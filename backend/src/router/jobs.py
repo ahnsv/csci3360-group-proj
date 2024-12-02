@@ -1,11 +1,19 @@
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import desc, select
 
-from src.application.jobs import extract_course_content
-from src.database.models import Integration, Job, JobStatus, JobType
+from src.application.jobs import extract_course_content, process_course_materials
+from src.database.models import (
+    CourseMaterial,
+    CourseMaterialType,
+    Integration,
+    Job,
+    JobStatus,
+    JobType,
+)
 from src.deps import AsyncDBSession, CurrentUser
 from src.settings import settings
 
@@ -17,8 +25,8 @@ class JobResponse(BaseModel):
     type: str
     status: str
     error_message: str | None
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
 
 async def run_course_sync(
@@ -108,8 +116,8 @@ async def trigger_course_sync(
         type=job.type.value,
         status=job.status.value,
         error_message=job.error_message,
-        created_at=job.created_at.isoformat(),
-        updated_at=job.updated_at.isoformat(),
+        created_at=job.created_at,
+        updated_at=job.updated_at,
     )
 
 
@@ -132,8 +140,8 @@ async def get_job_status(
         type=job.type.value,
         status=job.status.value,
         error_message=job.error_message,
-        created_at=job.created_at.isoformat(),
-        updated_at=job.updated_at.isoformat(),
+        created_at=job.created_at,
+        updated_at=job.updated_at,
     )
 
 
@@ -162,8 +170,52 @@ async def list_jobs(
             type=job.type.value,
             status=job.status.value,
             error_message=job.error_message,
-            created_at=job.created_at.isoformat(),
-            updated_at=job.updated_at.isoformat(),
+            created_at=job.created_at,
+            updated_at=job.updated_at,
         )
         for job in jobs
     ]
+
+
+@router.post("/trigger-process-course-materials")
+async def trigger_process_course_materials(
+    course_id: int,
+    db_session: AsyncDBSession,
+    current_user: CurrentUser,
+    background_tasks: BackgroundTasks,
+):
+    # Get course materials
+    stmt = select(CourseMaterial).where(
+        CourseMaterial.course_id == course_id,
+        CourseMaterial.type == CourseMaterialType.PDF,
+        ~CourseMaterial.documents.any(),
+    )
+    result = await db_session.execute(stmt)
+    course_materials = result.scalars().all()
+    if not course_materials:
+        raise HTTPException(status_code=404, detail="No course materials found")
+
+    # Create new job record
+    job = Job(
+        type=JobType.COURSE_MATERIAL_SYNC,
+        status=JobStatus.PENDING,
+        user_id=current_user.id,
+    )
+    db_session.add(job)
+    await db_session.commit()
+    await db_session.refresh(job)
+
+    background_tasks.add_task(
+        process_course_materials,
+        db_session=db_session,
+        course_materials=course_materials,
+    )
+
+    return JobResponse(
+        id=job.id,
+        type=job.type.value,
+        status=job.status.value,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+    )

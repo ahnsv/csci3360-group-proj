@@ -1,5 +1,6 @@
 import enum
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -11,7 +12,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, relationship
 from sqlalchemy.sql import func
@@ -189,6 +190,7 @@ class CourseMaterial(Base):
     name = Column(String, nullable=True)
     canvas_id = Column(String, nullable=True)
 
+    documents = relationship("MaterialDocument", back_populates="course_material")
     course = relationship("Course")
 
     # add unique constraint on course_id and name
@@ -261,6 +263,7 @@ class JobStatus(enum.Enum):
 
 class JobType(enum.Enum):
     COURSE_SYNC = "COURSE_SYNC"
+    COURSE_MATERIAL_SYNC = "COURSE_MATERIAL_SYNC"
 
 
 class Job(Base):
@@ -351,7 +354,6 @@ class ChatroomMember(Base):
     # Relationships
     chatroom = relationship("Chatroom", back_populates="members")
     profile = relationship("Profiles", lazy="selectin")
-    
 
     __table_args__ = (
         UniqueConstraint("chatroom_id", "user_id", name="unique_chatroom_member"),
@@ -359,3 +361,29 @@ class ChatroomMember(Base):
 
     def __repr__(self):
         return f"<ChatroomMember(chatroom_id={self.chatroom_id}, user_id='{self.user_id}', is_admin={self.is_admin})>"
+
+
+class MaterialDocument(Base):
+    __tablename__ = "material_documents"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    content = Column(Text, nullable=True)
+    meta_data = Column("metadata", JSONB, nullable=True)
+    embedding = Column(Vector, nullable=True)
+    course_id = Column(
+        BigInteger,
+        ForeignKey("course.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
+    course_material_id = Column(
+        BigInteger,
+        ForeignKey("course_material.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
+
+    course_material = relationship(
+        "CourseMaterial", back_populates="documents", lazy="selectin"
+    )
+
+    def __repr__(self):
+        return f"<MaterialDocument(id={self.id})>"

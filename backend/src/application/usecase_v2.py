@@ -91,10 +91,16 @@ async def get_integration_token(
     return token.token, token.refresh_token
 
 
+class CanvasCourse(BaseModel):
+    id: int
+    name: str
+    created_at: str
+
+
 async def list_canvas_courses(
     session: AsyncSession,
     user_id: str,
-) -> list[dict[str, Any]]:
+) -> list[CanvasCourse]:
     """Retrieve a list of Canvas courses for a user.
 
     Args:
@@ -102,15 +108,16 @@ async def list_canvas_courses(
         user_id (str): The unique identifier of the user.
 
     Returns:
-        list[dict[str, Any]]: A list of courses with their details.
+        list[CanvasCourse]: A list of courses with their details.
 
     Raises:
         TokenNotFoundError: If no Canvas token is found for the user.
     """
     canvas_token, _ = await get_integration_token(session, user_id, "canvas")
-    return external_usecase.fetch_canvas_courses(
+    courses = external_usecase.fetch_canvas_courses(
         canvas_api_url=settings.canvas_api_url, canvas_api_key=canvas_token
     )
+    return [CanvasCourse.model_validate(course) for course in courses]
 
 
 async def get_upcoming_assignments_and_quizzes(
@@ -163,9 +170,21 @@ class EventIn(BaseModel):
     description: Optional[str]
 
 
+class GoogleCalendarEvent(BaseModel):
+    id: str
+    title: str
+    start: str
+    end: str
+    description: Optional[str]
+
+
+class SyncToGoogleCalendarOutput(BaseModel):
+    created_events: list[GoogleCalendarEvent]
+
+
 async def sync_to_google_calendar(
     session: AsyncSession, user_id: str, calendar_id: str, events: str
-) -> list[dict[str, Any]]:
+) -> SyncToGoogleCalendarOutput:
     """Synchronize Canvas events to Google Calendar.
 
     Args:
@@ -175,7 +194,7 @@ async def sync_to_google_calendar(
         events (str): Json String of a list of Canvas events to sync. e.g., '[{"title": "Event 1", "start_time": "2024-11-01T00:00:00Z", "end_time": "2024-11-01T01:00:00Z", "description": "Description of Event 1"}]'
 
     Returns:
-        list[dict[str, Any]]: List of created Google Calendar events.
+        SyncToGoogleCalendarOutput: List of created Google Calendar events.
 
     Raises:
         TokenNotFoundError: If no Google token is found for the user.
@@ -216,7 +235,9 @@ async def sync_to_google_calendar(
         )
         created_events.append(created_event)
 
-    return created_events
+    return SyncToGoogleCalendarOutput.model_validate(
+        {"created_events": created_events}
+    )
 
 
 async def get_study_progress(
@@ -341,23 +362,24 @@ async def generate_subtasks(
     messages = [
         {
             "role": "system",
-            "content": "You are a helpful assistant that breaks down tasks into subtasks. Return a JSON array of subtasks with title, description, and estimated_time fields. Estimated time should be in minutes. Make sure to exclude obvious tasks like 'Read the textbook', 'Submit an assignment', 'Take notes', 'Review for exam', etc. Limit your response upto 5 subtasks."
+            "content": "You are a helpful assistant that breaks down tasks into subtasks. Return a JSON array of subtasks with title, description, and estimated_time fields. Estimated time should be in minutes. Make sure to exclude obvious tasks like 'Read the textbook', 'Submit an assignment', 'Take notes', 'Review for exam', etc. Limit your response upto 5 subtasks.",
         },
         {
-            "role": "user", 
-            "content": f"Break down this task into subtasks: {task_name}" + (f" for the course {course_name}" if course_name else "")
-        }
+            "role": "user",
+            "content": f"Break down this task into subtasks: {task_name}"
+            + (f" for the course {course_name}" if course_name else ""),
+        },
     ]
-    
+
     response = await openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
         response_format={"type": "json_object"},
-        temperature=0.7
+        temperature=0.7,
     )
 
     subtasks_data = json.loads(response.choices[0].message.content)
-    
+
     subtasks = []
     for subtask in subtasks_data["subtasks"]:
         task_out = SubTaskOut(
@@ -366,8 +388,9 @@ async def generate_subtasks(
             estimated_time=subtask.get("estimated_time"),
         )
         subtasks.append(task_out)
-    
+
     return [task.model_dump(mode="json") for task in subtasks]
+
 
 async def get_events_on_date(
     session: AsyncSession, user_id: str, date: datetime
@@ -375,7 +398,9 @@ async def get_events_on_date(
     google_token_data, refresh_token = await get_integration_token(
         session, user_id, "google"
     )
-    preference_result = await session.execute(select(Preference).where(Preference.user_id == uuid.UUID(user_id)))
+    preference_result = await session.execute(
+        select(Preference).where(Preference.user_id == uuid.UUID(user_id))
+    )
     preference = preference_result.scalar_one_or_none()
     google_calendar_id = None
     if preference:
@@ -388,11 +413,15 @@ async def get_events_on_date(
         client_secret=settings.gcal_client_secret,
         refresh_token=refresh_token,
     )
-    start_date = date.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
-    end_date = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
+    start_date = (
+        date.replace(hour=0, minute=0, second=0, microsecond=0).isoformat() + "Z"
+    )
+    end_date = (date + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).isoformat() + "Z"
     return external_usecase.list_google_calendar_events(
         google_credentials=credentials,
-        calendar_id="primary" ,
+        calendar_id="primary",
         start_date=start_date,
         end_date=end_date,
     )

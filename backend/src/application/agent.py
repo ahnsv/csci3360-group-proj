@@ -1,6 +1,5 @@
 import json
 from datetime import datetime
-from time import strptime
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
@@ -16,6 +15,7 @@ from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
+from src.application import usecase_v2
 from src.application.usecase_v2 import (
     create_task,
     get_upcoming_assignments_and_quizzes,
@@ -28,6 +28,18 @@ from src.schema import TaskIn
 
 # Agent cache to store initialized agents
 _agent_cache: Dict[str, CompiledGraph] = {}
+
+
+class CreateEvent(BaseModel):
+    event_name: str
+    event_description: str
+    event_start_time: str
+    event_end_time: str
+
+
+class CreateEventToCalendarInput(BaseModel):
+    events: list[CreateEvent] = Field(default_factory=list)
+    calendar_id: str
 
 
 # Define tools with container injection
@@ -72,7 +84,7 @@ def create_tools(container: ApplicationContainer, user_id: str):
         Returns:
             dict: The created task.
         """
-        due_dt = strptime(task_due_date, "%Y-%m-%d")
+        due_dt = datetime.strptime(task_due_date, "%Y-%m-%d")
         return await create_task(
             session=container.db_session,
             user_id=user_id,
@@ -84,23 +96,49 @@ def create_tools(container: ApplicationContainer, user_id: str):
             ),
         )
 
-    async def sync_user_calendar():
-        """Synchronize Canvas assignments and deadlines with Google Calendar.
+    async def get_events_on_date(date: str):
+        """Get events on a specific date.
+
+        Args:
+            date (str): The date to get events for in YYYY-MM-DD format.
+
+        Returns:
+            list[dict]: List of events on the specified date.
+        """
+        date_dt = datetime.strptime(date, "%Y-%m-%d")
+        return await usecase_v2.get_events_on_date(
+            session=container.db_session, user_id=user_id, date=date_dt
+        )
+
+    async def add_event_to_calendar(
+        event_input: CreateEventToCalendarInput,
+    ):
+        """Add an event to the user's Google Calendar.
+
+        Args:
+            event_input (CreateEventToCalendarInput): The events to add to the user's Google Calendar.
 
         Returns:
             dict: Status of calendar sync operation including number of events synced.
         """
-        return await sync_to_google_calendar(
-            session=container.db_session, user_id=user_id
+        result = await sync_to_google_calendar(
+            session=container.db_session,
+            user_id=user_id,
+            calendar_id=event_input.calendar_id,
+            events=event_input.events.model_dump_json(),
         )
+        return result.model_dump()
 
     async def get_user_courses():
         """List all Canvas courses the user is enrolled in.
 
         Returns:
-            list[dict]: List of courses with details like name, code, and enrollment status.
+            list[CanvasCourse]: List of courses with details like name, code, and enrollment status.
         """
-        return await list_canvas_courses(session=container.db_session, user_id=user_id)
+        result = await list_canvas_courses(
+            session=container.db_session, user_id=user_id
+        )
+        return [course.model_dump() for course in result]
 
     async def get_user_upcoming_work(
         n_days: int = 7,
@@ -155,12 +193,12 @@ def create_tools(container: ApplicationContainer, user_id: str):
             args_schema=create_schema_from_function("add_task", add_task),
         ),
         StructuredTool(
-            name="sync_calendar",
-            description="Synchronize Canvas assignments and deadlines with Google Calendar",
-            func=sync_user_calendar,
-            coroutine=sync_user_calendar,
+            name="add_event_to_calendar",
+            description="Add an event to the user's Google Calendar",
+            func=add_event_to_calendar,
+            coroutine=add_event_to_calendar,
             args_schema=create_schema_from_function(
-                "sync_calendar", sync_user_calendar
+                "add_event_to_calendar", add_event_to_calendar
             ),
         ),
         StructuredTool(
@@ -171,12 +209,21 @@ def create_tools(container: ApplicationContainer, user_id: str):
             args_schema=create_schema_from_function("list_courses", get_user_courses),
         ),
         StructuredTool(
-            name="get_upcoming_assignments_and_quizzes",
+            name="get_user_upcoming_work",
             description="Get upcoming assignments and quizzes with optional date range and course filters",
             func=get_user_upcoming_work,
             coroutine=get_user_upcoming_work,
             args_schema=create_schema_from_function(
-                "get_upcoming_assignments_and_quizzes", get_user_upcoming_work
+                "get_user_upcoming_work", get_user_upcoming_work
+            ),
+        ),
+        StructuredTool(
+            name="get_events_on_date",
+            description="Get events on a specific date",
+            func=get_events_on_date,
+            coroutine=get_events_on_date,
+            args_schema=create_schema_from_function(
+                "get_events_on_date", get_events_on_date
             ),
         ),
         # Material documents retriever
@@ -254,9 +301,9 @@ async def chat_with_agent(
                               You are a helpful assistant that can help the user with their tasks.
 
                               You can use the following tools to help the user:
-                              - sync_calendar: Synchronize tasks with Google Calendar.
+                              - add_event_to_calendar: Add an event to the user's Google Calendar.
                               - list_courses: List all Canvas courses.
-                              - get_upcoming_assignments_and_quizzes: Get upcoming assignments and quizzes.
+                              - get_user_upcoming_work: Get upcoming assignments and quizzes.
                               - material_documents_retriever: Retrieve material documents from the database.
                               - get_now_datetime: Get the current date and time in YYYY-MM-DD HH:MM:SS format.
                               - ask_if_adding_task_is_ok: Ask the user if they want to add a new task to their task list.

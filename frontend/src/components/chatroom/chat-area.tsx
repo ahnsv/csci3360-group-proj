@@ -9,6 +9,19 @@ import { Send } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { API_URL } from '@/app/_api/constants';
 import { Card } from '../ui/card';
+import { Assignment } from './assignment-quiz-card';
+import AssignmentQuizCard from './assignment-quiz-card';
+import CalendarEventCard from './calendar-event-card';
+import CourseListCard from './course-list-card';
+// import MaterialDocumentsCard from './material-documents-card';
+// import TaskConfirmationCard from './task-confirmation-card';
+// import TaskCard from './task-card';
+
+interface ToolInvocation {
+    name: string;
+    result: string | Array<unknown> | Record<string, unknown>;
+    state: "result" | "failure";
+}
 
 interface Message {
     id: number;
@@ -21,6 +34,7 @@ interface Message {
         value: string;
         type: "button" | "link";
     }[];
+    tool_invocations?: ToolInvocation[];
 }
 
 interface ChatAreaProps {
@@ -30,6 +44,23 @@ interface ChatAreaProps {
 interface ConversationStarter {
     title: string;
     prompt: string;
+}
+
+export interface CanvasCourse {
+    id: number;
+    name: string;
+    created_at: string;
+}
+
+export interface CalendarEvent {
+    id: string;
+    title: string;
+    start: string;
+    end: string;
+    description?: string;
+}
+interface CalendarEvents {
+    created_events: CalendarEvent[];
 }
 
 const CONVERSATION_STARTERS: ConversationStarter[] = [
@@ -50,6 +81,56 @@ const CONVERSATION_STARTERS: ConversationStarter[] = [
         prompt: "my study sessions for the final?"
     }
 ];
+
+const ToolResultComponent = ({ tool, messageId, accessToken }: {
+    tool: ToolInvocation;
+    messageId: number;
+    accessToken: string;
+}) => {
+    switch (tool.name) {
+        case 'get_user_upcoming_work':
+            return (
+                <AssignmentQuizCard
+                    assignments={(tool.result as { assignments: Assignment[] }).assignments}
+                    accessToken={accessToken}
+                />
+            );
+        case 'add_event_to_calendar':
+            const calendarResult = tool.result as Record<string, unknown>;
+            return (
+                <CalendarEventCard
+                    event={(calendarResult.created_events as CalendarEvent[])[0]}
+                />
+            );
+        case 'list_courses':
+            return (
+                <CourseListCard
+                    courses={tool.result as CanvasCourse[]}
+                />
+            );
+        // case 'material_documents_retriever':
+        //     return (
+        //         <MaterialDocumentsCard
+        //             documents={tool.result as Document[]}
+        //         />
+        //     );
+        // case 'ask_if_adding_task_is_ok':
+        //     return (
+        //         <TaskConfirmationCard
+        //             task={tool.result as Task}
+        //             messageId={messageId}
+        //         />
+        //     );
+        // case 'add_task':
+        //     return (
+        //         <TaskCard
+        //             task={tool.result as Task}
+        //         />
+        //     );
+        default:
+            return null;
+    }
+};
 
 export default function ChatArea({ chatroomId }: ChatAreaProps) {
     const { accessToken, user } = useAuth();
@@ -226,15 +307,28 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
                         <WelcomeMessage />
                     ) : (
                         messages.map((message) => (
-                            <ChatBubble
-                                key={message.id}
-                                message={{
-                                    author: message.author,
-                                    message: message.message,
-                                    sent_at: new Date(message.sent_at),
-                                    actions: message.actions
-                                }}
-                            />
+                            <div key={message.id}>
+                                <ChatBubble
+                                    message={{
+                                        author: message.author,
+                                        message: message.message,
+                                        sent_at: new Date(message.sent_at),
+                                        actions: message.actions
+                                    }}
+                                />
+                                <div className="mt-2 space-y-2">
+                                    {message.tool_invocations?.map((tool, index) => (
+                                        tool.state === "result" && (
+                                            <ToolResultComponent
+                                                key={`${message.id}-${index}`}
+                                                tool={tool}
+                                                messageId={message.id}
+                                                accessToken={accessToken}
+                                            />
+                                        )
+                                    ))}
+                                </div>
+                            </div>
                         ))
                     )}
                 </div>

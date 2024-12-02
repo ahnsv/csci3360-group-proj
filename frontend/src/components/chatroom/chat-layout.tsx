@@ -30,6 +30,17 @@ interface ChatLayoutProps {
     initialChatrooms: Chatroom[];
 }
 
+export async function deleteChatroom(id: number, accessToken: string) {
+    const response = await fetch(`${API_URL}/chatrooms/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    });
+    if (!response.ok) throw new Error('Failed to delete chatroom');
+    return await response.text();
+}
+
 export default function ChatLayout({ initialChatrooms }: ChatLayoutProps) {
     const { accessToken, user } = useAuth();
     const [chatrooms, setChatrooms] = useState<Chatroom[]>(initialChatrooms);
@@ -48,9 +59,9 @@ export default function ChatLayout({ initialChatrooms }: ChatLayoutProps) {
                     member_ids: [user.id]
                 })
             });
-            
+
             if (!response.ok) throw new Error('Failed to create chatroom');
-            
+
             const newChatroom = await response.json();
             setChatrooms(prev => [...prev, newChatroom]);
             setSelectedChatroom(newChatroom.id);
@@ -63,12 +74,19 @@ export default function ChatLayout({ initialChatrooms }: ChatLayoutProps) {
         setSelectedChatroom(null);
     };
 
+    const handleDeleteChatroom = async (id: number) => {
+        await deleteChatroom(id, accessToken);
+        setChatrooms(prev => prev.filter(chatroom => chatroom.id !== id));
+        setSelectedChatroom(null);
+    };
+
     return (
         <div className="flex h-full">
-            <ChatSidebar 
+            <ChatSidebar
                 chatrooms={chatrooms}
                 selectedChatroom={selectedChatroom}
                 onSelectChatroom={setSelectedChatroom}
+                onDeleteChatroom={handleDeleteChatroom}
             />
             <div className="flex-1 flex flex-col border-t">
                 <div className="p-4 border-b flex justify-end gap-2">
@@ -81,7 +99,7 @@ export default function ChatLayout({ initialChatrooms }: ChatLayoutProps) {
                         Clear Chat
                     </Button>
                 </div>
-                <ChatArea 
+                <ChatArea
                     chatroomId={selectedChatroom}
                 />
             </div>

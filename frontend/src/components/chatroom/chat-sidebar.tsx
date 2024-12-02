@@ -25,10 +25,10 @@ interface ChatSidebarProps {
     onSelectChatroom: (id: number) => void;
 }
 
-export default function ChatSidebar({ 
+export default function ChatSidebar({
     chatrooms,
-    selectedChatroom, 
-    onSelectChatroom 
+    selectedChatroom,
+    onSelectChatroom
 }: ChatSidebarProps) {
     return (
         <div className="w-64 border-r border-t">
@@ -40,14 +40,19 @@ export default function ChatSidebar({
                             <button
                                 key={chatroom.id}
                                 onClick={() => onSelectChatroom(chatroom.id)}
-                                className={`w-full text-left p-2 rounded ${
-                                    selectedChatroom === chatroom.id 
-                                        ? 'bg-blue-100' 
+                                className={`w-full text-left p-2 rounded ${selectedChatroom === chatroom.id
+                                        ? 'bg-blue-100'
                                         : 'hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
-                                {chatroom.name || 
-                                 new Date(chatroom.created_at).toLocaleTimeString()}
+                                {chatroom.name ||
+                                    (() => {
+                                        const date = new Date(chatroom.created_at);
+                                        const today = new Date();
+                                        return date.toDateString() === today.toDateString()
+                                            ? date.toLocaleTimeString()
+                                            : date.toLocaleDateString();
+                                    })()}
                             </button>
                         ))}
                     </div>

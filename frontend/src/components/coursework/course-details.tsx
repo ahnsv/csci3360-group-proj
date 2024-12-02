@@ -7,20 +7,27 @@ import { Calendar, FileText, GraduationCap, Link as LinkIcon, User } from "lucid
 import { useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { ScrollArea } from "../ui/scroll-area"
+import { Button } from "../ui/button"
+import { Plus, BookOpen } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
+import { UploadDropzone } from "@/components/ui/upload-dropzone"
+import { toast } from "@/hooks/use-toast"
+import { API_URL } from "@/app/_api/constants"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function CourseDetails() {
   const searchParams = useSearchParams()
   const courseId = searchParams.get('courseId')
   const [course, setCourse] = useState<Course | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const { accessToken } = useAuth();
   useEffect(() => {
     async function fetchCourseDetails() {
       if (!courseId) return
 
       setLoading(true)
       const supabase = createSupabaseClient()
-      
+
       const { data, error } = await supabase
         .from('course')
         .select(`
@@ -40,6 +47,31 @@ export default function CourseDetails() {
 
     fetchCourseDetails()
   }, [courseId])
+
+  const handleIndex = async () => {
+    const response = await fetch(`${API_URL}/jobs/trigger-process-course-materials?course_id=${courseId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    })
+    if (response.status === 200) {
+      toast({
+        title: "Success",
+        description: "Course materials are being processed",
+      })
+    }
+    if (response.status === 404) {
+      const data = await response.json()
+      if (data.detail === "No course materials found") {
+        toast({
+          title: "No materials to index",
+          description: "Either there are no materials to index or the materials are already being processed",
+        })
+      }
+    }
+  }
 
   if (!courseId) {
     return (
@@ -93,8 +125,8 @@ export default function CourseDetails() {
           {course.link && (
             <div className="flex items-center gap-2">
               <LinkIcon className="h-4 w-4 text-muted-foreground" />
-              <a href={course.link} target="_blank" rel="noopener noreferrer" 
-                 className="text-blue-500 hover:underline">
+              <a href={course.link} target="_blank" rel="noopener noreferrer"
+                className="text-blue-500 hover:underline">
                 Canvas Course Page
               </a>
             </div>
@@ -102,32 +134,57 @@ export default function CourseDetails() {
         </CardContent>
       </Card>
 
-      {course.course_material && course.course_material.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Materials</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[300px]">
-              <div className="space-y-4">
-                {course.course_material.map((material) => (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Course Materials</CardTitle>
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Material
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Upload Course Material</DialogTitle>
+                </DialogHeader>
+                <UploadDropzone courseId={courseId} />
+              </DialogContent>
+            </Dialog>
+
+            <Button size="sm" variant="outline" onClick={handleIndex}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Index Materials
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[300px]">
+            <div className="space-y-4">
+              {course.course_material && course.course_material.length > 0 ? (
+                course.course_material.map((material) => (
                   <div key={material.id} className="flex items-center gap-2">
                     <FileText className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={material.url} 
-                      target="_blank" 
+                    <a
+                      href={material.url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-500 hover:underline"
                     >
                       {material.name}
                     </a>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
+                ))
+              ) : (
+                <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+                  No course materials available at this moment
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   )
 } 

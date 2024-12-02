@@ -1,9 +1,8 @@
-
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import not_, select
+from sqlalchemy import select
 
 from src.application import usecase_v2
 from src.database.models import Course, CourseMaterial, CourseMembership
@@ -20,11 +19,12 @@ async def get_courses(db_session: AsyncDBSession, current_user: CurrentUser):
             select(CourseMembership.course_id).where(
                 CourseMembership.user_id == current_user.id
             )
-        )
+        ),
     )
     result = await db_session.execute(stmt)
     courses = result.scalars().all()
     return courses
+
 
 class CourseMaterialOut(BaseModel):
     id: int
@@ -34,12 +34,14 @@ class CourseMaterialOut(BaseModel):
     updated_at: datetime
     created_at: datetime
 
+
 class CourseOut(BaseModel):
     id: int
     name: str
     description: str | None
     instructor: str | None
     materials: list[CourseMaterialOut]
+
 
 @router.get("/{course_id}", response_model=CourseOut)
 async def get_course(
@@ -61,10 +63,10 @@ async def get_course(
     )
     result = await db_session.execute(stmt)
     course_materials = result.all()
-    
+
     if not course_materials:
         return None
-        
+
     course = course_materials[0].Course
     course_dict = {
         "id": course.id,
@@ -82,7 +84,7 @@ async def get_course(
             }
             for row in course_materials
             if row.CourseMaterial is not None
-        ]
+        ],
     }
     return course_dict
 

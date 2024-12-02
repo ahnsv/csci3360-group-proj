@@ -1,11 +1,10 @@
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
+from openai import BadRequestError
 from pydantic import BaseModel
 from sqlalchemy import select
-from openai import BadRequestError
 
-from src.application import openai
 from src.application.openai import OpenAIClient, chat_with_schedule_agent
 from src.database.models import Chat
 from src.deps import ApplicationContainer, AsyncDBSession, CanvasApiError, CurrentUser

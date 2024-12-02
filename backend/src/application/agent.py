@@ -1,11 +1,12 @@
 import json
+from functools import partial
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from langchain.tools.retriever import create_retriever_tool
 from langchain_community.vectorstores import SupabaseVectorStore
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.tools import tool
+from langchain_core.tools import StructuredTool, create_schema_from_function
 from langchain_core.vectorstores import VectorStoreRetriever
 from langchain_openai import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
@@ -14,6 +15,7 @@ from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
+from src.application.openai_utils import function_to_schema
 from src.application.usecase_v2 import (
     get_study_progress,
     get_upcoming_assignments_and_quizzes,
@@ -29,35 +31,88 @@ _agent_cache: Dict[str, CompiledGraph] = {}
 
 # Define tools with container injection
 def create_tools(container: ApplicationContainer, user_id: str):
-    @tool
-    async def get_study_progress_tool() -> str:
-        """Get the user's study progress."""
+    async def get_user_study_progress():
+        """Get the user's study progress and learning analytics.
+        
+        Returns:
+            dict: Study progress data including completed materials, quiz scores, etc.
+        """
         return await get_study_progress(session=container.db_session, user_id=user_id)
 
-    @tool
-    async def sync_calendar_tool() -> str:
-        """Synchronize tasks with Google Calendar."""
-        return await sync_to_google_calendar(
-            session=container.db_session, user_id=user_id
-        )
+    async def sync_user_calendar():
+        """Synchronize Canvas assignments and deadlines with Google Calendar.
+        
+        Returns:
+            dict: Status of calendar sync operation including number of events synced.
+        """
+        return await sync_to_google_calendar(session=container.db_session, user_id=user_id)
 
-    @tool
-    async def list_courses_tool() -> str:
-        """List all Canvas courses."""
+    async def get_user_courses():
+        """List all Canvas courses the user is enrolled in.
+        
+        Returns:
+            list[dict]: List of courses with details like name, code, and enrollment status.
+        """
         return await list_canvas_courses(session=container.db_session, user_id=user_id)
 
-    @tool
-    async def get_upcoming_assignments_and_quizzes_tool() -> str:
-        """Get upcoming assignments and quizzes."""
+    async def get_user_upcoming_work(n_days: int = 7, start_date: str = None, end_date: str = None, course_id: str = None):
+        """Get upcoming assignments and quizzes for the user.
+        
+        Args:
+            n_days (int, optional): Number of days to look ahead. Defaults to 7.
+            start_date (str, optional): Start date in YYYY-MM-DD format. Defaults to None.
+            end_date (str, optional): End date in YYYY-MM-DD format. Defaults to None.
+            course_id (str, optional): Filter by specific course ID. Defaults to None.
+
+        Returns:
+            dict: Dictionary containing lists of upcoming assignments and quizzes.
+        """
         return await get_upcoming_assignments_and_quizzes(
-            session=container.db_session, user_id=user_id
+            session=container.db_session,
+            user_id=user_id,
+            n_days=n_days,
+            start_date=start_date,
+            end_date=end_date,
+            course_id=course_id
         )
 
     return [
-        get_study_progress_tool,
-        sync_calendar_tool,
-        list_courses_tool,
-        get_upcoming_assignments_and_quizzes_tool,
+        StructuredTool(
+            name="get_study_progress",
+            description="Get the user's study progress and learning analytics data",
+            func=get_user_study_progress,
+            coroutine=get_user_study_progress,
+            args_schema=create_schema_from_function(
+                "get_study_progress", get_user_study_progress
+            ),
+        ),
+        StructuredTool(
+            name="sync_calendar",
+            description="Synchronize Canvas assignments and deadlines with Google Calendar",
+            func=sync_user_calendar,
+            coroutine=sync_user_calendar,
+            args_schema=create_schema_from_function(
+                "sync_calendar", sync_user_calendar
+            ),
+        ),
+        StructuredTool(
+            name="list_courses",
+            description="List all Canvas courses the user is enrolled in",
+            func=get_user_courses,
+            coroutine=get_user_courses,
+            args_schema=create_schema_from_function(
+                "list_courses", get_user_courses
+            ),
+        ),
+        StructuredTool(
+            name="get_upcoming_assignments_and_quizzes",
+            description="Get upcoming assignments and quizzes with optional date range and course filters",
+            func=get_user_upcoming_work,
+            coroutine=get_user_upcoming_work,
+            args_schema=create_schema_from_function(
+                "get_upcoming_assignments_and_quizzes", get_user_upcoming_work
+            ),
+        ),
     ]
 
 

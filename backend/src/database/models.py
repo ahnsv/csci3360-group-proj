@@ -352,7 +352,7 @@ class ChatroomMember(Base):
     is_admin = Column(Boolean, nullable=False, default=False)
 
     # Relationships
-    chatroom = relationship("Chatroom", back_populates="members")
+    chatroom = relationship("Chatroom", back_populates="members", lazy="selectin")
     profile = relationship("Profiles", lazy="selectin")
 
     __table_args__ = (

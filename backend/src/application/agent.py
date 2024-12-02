@@ -179,6 +179,12 @@ def create_tools(container: ApplicationContainer, user_id: str):
                 "get_upcoming_assignments_and_quizzes", get_user_upcoming_work
             ),
         ),
+        # Material documents retriever
+        create_retriever_tool(
+            get_supabase_vector_store_retriever(container),
+            name="material_documents_retriever",
+            description="Retrieve material documents from the database.",
+        ),
     ]
 
 
@@ -189,16 +195,8 @@ def get_or_create_agent(container: ApplicationContainer, user_id: str) -> Compil
             model="gpt-4o-mini", api_key=container.settings.openai_api_key
         )
         tools = create_tools(container, user_id)
-        vector_store_retriever = get_supabase_vector_store_retriever(container)
-        material_retriever_tool = create_retriever_tool(
-            vector_store_retriever,
-            name="material_documents_retriever",
-            description="Retrieve material documents from the database.",
-        )
         memory = MemorySaver()
-        _agent_cache[user_id] = create_react_agent(
-            model, tools + [material_retriever_tool], checkpointer=memory
-        )
+        _agent_cache[user_id] = create_react_agent(model, tools, checkpointer=memory)
     return _agent_cache[user_id]
 
 

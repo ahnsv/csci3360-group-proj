@@ -83,7 +83,7 @@ async def create_chatroom(
         member = ChatroomMember(
             chatroom_id=new_chatroom.id,
             user_id=user_id,
-            is_admin=user_id == current_user.id,
+            is_admin=str(user_id) == str(current_user.id),
         )
         members.append(member)
 
@@ -131,7 +131,7 @@ async def get_chatroom(
     return chatroom
 
 
-@router.delete("/{chatroom_id}")
+@router.delete("/{chatroom_id}", status_code=204)
 async def delete_chatroom(
     chatroom_id: int,
     current_user: Profiles = Depends(get_current_user),
@@ -154,10 +154,18 @@ async def delete_chatroom(
         )
 
     # Delete chatroom
-    await session.execute(
-        select(Chatroom).where(Chatroom.id == chatroom_id).with_for_update()
+    chatroom = (
+        select(Chatroom)
+        .where(Chatroom.id == chatroom_id)
+        .with_for_update()
     )
-    await session.delete(member.chatroom)
+    result = await session.execute(query)
+    chatroom = result.scalar_one_or_none()
+
+    if not chatroom:
+        raise HTTPException(status_code=404, detail="Chatroom not found")
+
+    await session.delete(chatroom)
     await session.commit()
 
     return {"message": "Chatroom deleted successfully"}
@@ -215,6 +223,8 @@ class HandleMessageResponse(BaseModel):
     message: str
     actions: Optional[List[dict[str, Any]]] = Field(default_factory=list)
     tool_invocations: List[ToolInvocation]
+    sent_at: datetime = Field(default_factory=datetime.now)
+    author: str = Field(default="agent")
 
 
 @router.post("/{chatroom_id}/messages", response_model=HandleMessageResponse)

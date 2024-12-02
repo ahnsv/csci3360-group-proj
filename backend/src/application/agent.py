@@ -1,6 +1,7 @@
 import json
-from functools import partial
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from time import strptime
+from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException
 from langchain.tools.retriever import create_retriever_tool
@@ -15,15 +16,15 @@ from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import create_react_agent
 from pydantic import BaseModel, Field
 
-from src.application.openai_utils import function_to_schema
 from src.application.usecase_v2 import (
-    get_study_progress,
+    create_task,
     get_upcoming_assignments_and_quizzes,
     list_canvas_courses,
     sync_to_google_calendar,
 )
 from src.database.models import Chat
 from src.deps import ApplicationContainer, CurrentUser
+from src.schema import TaskIn
 
 # Agent cache to store initialized agents
 _agent_cache: Dict[str, CompiledGraph] = {}
@@ -31,33 +32,84 @@ _agent_cache: Dict[str, CompiledGraph] = {}
 
 # Define tools with container injection
 def create_tools(container: ApplicationContainer, user_id: str):
-    async def get_user_study_progress():
-        """Get the user's study progress and learning analytics.
-        
+    async def get_now_datetime():
+        """Get the current date and time in YYYY-MM-DD HH:MM:SS format."""
+        return {
+            "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+    async def ask_if_adding_task_is_ok(
+        task_name: str,
+        task_description: str,
+        task_due_date: str,
+        task_type: Literal["ASSIGNMENT", "STUDY", "SOCIAL", "CHORE"],
+    ):
+        """Ask the user if they want to add a new task to their task list."""
+        return {
+            "message": "Do you want to add this task to your task list?",
+            "details": {
+                "task_name": task_name,
+                "task_description": task_description,
+                "task_due_date": task_due_date,
+                "task_type": task_type,
+            },
+        }
+
+    async def add_task(
+        task_name: str,
+        task_description: str,
+        task_due_date: str,
+        task_type: Literal["ASSIGNMENT", "STUDY", "SOCIAL", "CHORE"],
+    ):
+        """Add a new task to the user's task list.
+
+        Args:
+            task_name (str): The name of the task.
+            task_description (str): The description of the task.
+            task_due_date (str): The due date of the task in YYYY-MM-DD format.
+            task_type (Literal["ASSIGNMENT", "STUDY", "SOCIAL", "CHORE"]): The type of the task.
+
         Returns:
-            dict: Study progress data including completed materials, quiz scores, etc.
+            dict: The created task.
         """
-        return await get_study_progress(session=container.db_session, user_id=user_id)
+        due_dt = strptime(task_due_date, "%Y-%m-%d")
+        return await create_task(
+            session=container.db_session,
+            user_id=user_id,
+            task=TaskIn(
+                name=task_name,
+                description=task_description,
+                due_at=due_dt,
+                type=task_type,
+            ),
+        )
 
     async def sync_user_calendar():
         """Synchronize Canvas assignments and deadlines with Google Calendar.
-        
+
         Returns:
             dict: Status of calendar sync operation including number of events synced.
         """
-        return await sync_to_google_calendar(session=container.db_session, user_id=user_id)
+        return await sync_to_google_calendar(
+            session=container.db_session, user_id=user_id
+        )
 
     async def get_user_courses():
         """List all Canvas courses the user is enrolled in.
-        
+
         Returns:
             list[dict]: List of courses with details like name, code, and enrollment status.
         """
         return await list_canvas_courses(session=container.db_session, user_id=user_id)
 
-    async def get_user_upcoming_work(n_days: int = 7, start_date: str = None, end_date: str = None, course_id: str = None):
+    async def get_user_upcoming_work(
+        n_days: int = 7,
+        start_date: str = None,
+        end_date: str = None,
+        course_id: str = None,
+    ):
         """Get upcoming assignments and quizzes for the user.
-        
+
         Args:
             n_days (int, optional): Number of days to look ahead. Defaults to 7.
             start_date (str, optional): Start date in YYYY-MM-DD format. Defaults to None.
@@ -73,18 +125,34 @@ def create_tools(container: ApplicationContainer, user_id: str):
             n_days=n_days,
             start_date=start_date,
             end_date=end_date,
-            course_id=course_id
+            course_id=course_id,
         )
 
     return [
         StructuredTool(
-            name="get_study_progress",
-            description="Get the user's study progress and learning analytics data",
-            func=get_user_study_progress,
-            coroutine=get_user_study_progress,
+            name="get_now_datetime",
+            description="Get the current date and time in YYYY-MM-DD HH:MM:SS format",
+            func=get_now_datetime,
+            coroutine=get_now_datetime,
             args_schema=create_schema_from_function(
-                "get_study_progress", get_user_study_progress
+                "get_now_datetime", get_now_datetime
             ),
+        ),
+        StructuredTool(
+            name="ask_if_adding_task_is_ok",
+            description="Ask the user if they want to add a new task to their task list",
+            func=ask_if_adding_task_is_ok,
+            coroutine=ask_if_adding_task_is_ok,
+            args_schema=create_schema_from_function(
+                "ask_if_adding_task_is_ok", ask_if_adding_task_is_ok
+            ),
+        ),
+        StructuredTool(
+            name="add_task",
+            description="Add a new task to the user's task list",
+            func=add_task,
+            coroutine=add_task,
+            args_schema=create_schema_from_function("add_task", add_task),
         ),
         StructuredTool(
             name="sync_calendar",
@@ -100,9 +168,7 @@ def create_tools(container: ApplicationContainer, user_id: str):
             description="List all Canvas courses the user is enrolled in",
             func=get_user_courses,
             coroutine=get_user_courses,
-            args_schema=create_schema_from_function(
-                "list_courses", get_user_courses
-            ),
+            args_schema=create_schema_from_function("list_courses", get_user_courses),
         ),
         StructuredTool(
             name="get_upcoming_assignments_and_quizzes",
@@ -190,11 +256,13 @@ async def chat_with_agent(
                               You are a helpful assistant that can help the user with their tasks.
 
                               You can use the following tools to help the user:
-                              - get_study_progress_tool: Get the user's study progress.
-                              - sync_calendar_tool: Synchronize tasks with Google Calendar.
-                              - list_courses_tool: List all Canvas courses.
-                              - get_upcoming_assignments_and_quizzes_tool: Get upcoming assignments and quizzes.
+                              - sync_calendar: Synchronize tasks with Google Calendar.
+                              - list_courses: List all Canvas courses.
+                              - get_upcoming_assignments_and_quizzes: Get upcoming assignments and quizzes.
                               - material_documents_retriever: Retrieve material documents from the database.
+                              - get_now_datetime: Get the current date and time in YYYY-MM-DD HH:MM:SS format.
+                              - ask_if_adding_task_is_ok: Ask the user if they want to add a new task to their task list.
+                              - add_task: Add a new task to the user's task list.
 
                               By using the tools, you can get information about the user's existing schedules, assignments, and quizzes. 
                               With this information, you can help the user find available time slots for studying.

@@ -130,7 +130,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <a href="#">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground border border-white bg-[#8a100b]">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg text-sidebar-primary-foreground border border-[#8a100b] bg-white">
                   <Image src="/bc_logo.png" className="size-4" alt="BC Logo" width={32} height={32} />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">

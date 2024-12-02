@@ -84,6 +84,23 @@ function PromptForm() {
 
   async function onSubmit(data: PromptFormValues) {
     const { data: { user } } = await supabase.auth.getUser()
+    if (!preferenceId) {
+      const { data: newPreference, error: newPreferenceError } = await supabase.from("preference").insert({
+        user_id: user?.id,
+        task_extraction_prompt: data.taskExtractionPrompt,
+        scheduling_prompt: data.schedulingPrompt
+      }).select().single()
+      if (newPreferenceError) {
+        toast({
+          title: "Error creating preference",
+          description: newPreferenceError.message,
+        })
+      }
+      if (newPreference) {
+        setPreferenceId(newPreference.id.toString())
+      }
+      return
+    }
     const { error } = await supabase.from("preference").upsert({
       id: Number(preferenceId),
       user_id: user?.id,

@@ -18,6 +18,10 @@ export default function CourseList({ courses }: CourseListProps) {
     router.push(`/coursework?courseId=${courseId}`)
   }
 
+  if (courses.length === 0) {
+    return <div className="flex flex-col items-center justify-center h-full">No courses found</div>
+  }
+
   return (
     <div className="flex flex-col">
       {courses.map((course) => (

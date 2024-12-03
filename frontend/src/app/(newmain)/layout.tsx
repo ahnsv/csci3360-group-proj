@@ -16,6 +16,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { checkRequiredIntegrations } from "../_api/chat";
+import { Toaster } from "@/components/ui/toaster"
 
 const navMain = [
   {
@@ -90,6 +91,7 @@ export default async function Layout({
         </header>
         {children}
       </SidebarInset>
+      <Toaster />
     </SidebarProvider>
   )
 }

@@ -19,7 +19,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar
 } from "@/components/ui/sidebar"
+import { FeedbackModal } from "./feedback-modal"
 
 const data = {
   user: {
@@ -123,6 +125,7 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 }
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const { open } = useSidebar()
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
@@ -144,6 +147,19 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
+        {
+          open && (
+            <div className="mx-4 mt-4 rounded-lg p-4 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-blue-200/20 mt-auto my-2 transition-all duration-300">
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">We need your opinion!</h3>
+                <p className="text-xs text-muted-foreground">
+                  Help us improve Aquila by sharing your thoughts about the project.
+                </p>
+                <FeedbackModal />
+              </div>
+            </div>
+          )
+        }
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

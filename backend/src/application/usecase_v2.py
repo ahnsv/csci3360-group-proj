@@ -173,8 +173,8 @@ class EventIn(BaseModel):
 class GoogleCalendarEvent(BaseModel):
     id: str
     title: str
-    start: str
-    end: str
+    start: datetime
+    end: datetime
     description: Optional[str]
 
 

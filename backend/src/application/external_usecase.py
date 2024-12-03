@@ -215,9 +215,11 @@ def add_study_schedule_to_google_calendar(
     )
     return {
         "id": created_event["id"],
+        "title": created_event["summary"],
+        "description": created_event["description"],
         "html_link": created_event["htmlLink"],
-        "start": created_event["start"],
-        "end": created_event["end"],
+        "start": created_event["start"]["dateTime"],
+        "end": created_event["end"]["dateTime"],
     }
 
 

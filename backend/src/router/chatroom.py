@@ -101,6 +101,7 @@ async def list_chatrooms(
 ):
     query = (
         select(Chatroom)
+        .join(ChatroomMember)
         .options(joinedload(Chatroom.members))
         .where(ChatroomMember.user_id == current_user.id)
     )

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import ChatBubble from './chat-bubble';
 import { Button } from '../ui/button';
-import { Send } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { API_URL } from '@/app/_api/constants';
 import { Card } from '../ui/card';
@@ -65,20 +65,20 @@ interface CalendarEvents {
 
 const CONVERSATION_STARTERS: ConversationStarter[] = [
     {
-        title: "Hey, what are my assignments",
-        prompt: "or quizzes due this week?"
+        title: "Checking for upcoming assignments",
+        prompt: "What quizzes are due this week?"
     },
     {
-        title: "What courses",
-        prompt: "am I enrolled in?"
+        title: "Getting information about enrolled courses",
+        prompt: "What courses am I enrolled in?"
     },
     {
-        title: "Can you give me relevant reading materials from canvas",
-        prompt: "about next history response paper"
+        title: "Chat about your course reading materials",
+        prompt: "What are the readings for next week's history response paper?"
     },
     {
-        title: "Can you plan and schedule",
-        prompt: "my study sessions for the final?"
+        title: "Planning study sessions",
+        prompt: "Can you plan and schedule my study sessions for the final?"
     }
 ];
 
@@ -138,6 +138,7 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const [isAgentTyping, setIsAgentTyping] = useState(false);
 
     useEffect(() => {
         if (!chatroomId) {
@@ -176,6 +177,7 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
         if (!input.trim() || !chatroomId || isLoading) return;
 
         setIsLoading(true);
+        setIsAgentTyping(true);
         const message = input.trim();
         setInput('');
 
@@ -211,6 +213,7 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
             console.error('Error sending message:', error);
         } finally {
             setIsLoading(false);
+            setIsAgentTyping(false);
         }
     };
 
@@ -224,8 +227,9 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
     const handleStarterClick = async (starter: ConversationStarter) => {
         if (!chatroomId || isLoading) return;
 
-        const message = `${starter.title} ${starter.prompt}`;
+        const message = `${starter.prompt}`;
         setIsLoading(true);
+        setIsAgentTyping(true);
 
         // Add user message immediately to the UI
         const userMessage: Message = {
@@ -259,6 +263,7 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
             console.error('Error sending message:', error);
         } finally {
             setIsLoading(false);
+            setIsAgentTyping(false);
         }
     };
 
@@ -306,29 +311,41 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
                     {messages.length === 0 ? (
                         <WelcomeMessage />
                     ) : (
-                        messages.map((message) => (
-                            <div key={message.id}>
-                                {message.tool_invocations && 
-                                 message.tool_invocations.length > 0 && 
-                                 message.tool_invocations[message.tool_invocations.length - 1].state === "result" ? (
-                                    <ToolResultComponent
-                                        key={`${message.id}-last`}
-                                        tool={message.tool_invocations[message.tool_invocations.length - 1]}
-                                        messageId={message.id}
-                                        accessToken={accessToken}
-                                    />
-                                ) : (
-                                    <ChatBubble
-                                        message={{
-                                            author: message.author,
-                                            message: message.message,
-                                            sent_at: new Date(message.sent_at),
-                                            actions: message.actions
-                                        }}
-                                    />
-                                )}
-                            </div>
-                        ))
+                        <>
+                            {messages.map((message) => (
+                                <div key={message.id}>
+                                    {message.tool_invocations && 
+                                     message.tool_invocations.length > 0 && 
+                                     message.tool_invocations[message.tool_invocations.length - 1].state === "result" ? (
+                                        <ToolResultComponent
+                                            key={`${message.id}-last`}
+                                            tool={message.tool_invocations[message.tool_invocations.length - 1]}
+                                            messageId={message.id}
+                                            accessToken={accessToken}
+                                        />
+                                    ) : (
+                                        <ChatBubble
+                                            message={{
+                                                author: message.author,
+                                                message: message.message,
+                                                sent_at: new Date(message.sent_at),
+                                                actions: message.actions
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            ))}
+                            {isAgentTyping && (
+                                <ChatBubble
+                                    message={{
+                                        author: 'agent',
+                                        message: '',
+                                        sent_at: new Date(),
+                                        isTyping: true
+                                    }}
+                                />
+                            )}
+                        </>
                     )}
                 </div>
             </ScrollArea>

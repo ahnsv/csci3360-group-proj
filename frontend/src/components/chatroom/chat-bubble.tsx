@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import ReactMarkdown from 'react-markdown'
+import { Loader2 } from "lucide-react"
 
 type ChatAction = {
     name: string
@@ -13,6 +14,7 @@ type ChatMessage = {
     message: string
     sent_at: Date
     actions?: ChatAction[]
+    isTyping?: boolean
 }
 
 const formatTimestamp = (date: Date): string => {
@@ -31,9 +33,21 @@ const formatTimestamp = (date: Date): string => {
     });
 }
 
+interface ChatBubbleProps {
+    message: {
+        author: 'user' | 'agent';
+        message: string;
+        sent_at: Date;
+        actions?: {
+            name: string;
+            value: string;
+            type: "button" | "link";
+        }[];
+        isTyping?: boolean;
+    };
+}
 
-
-const ChatBubble = ({ message }: { message: ChatMessage }) => {
+export default function ChatBubble({ message }: ChatBubbleProps) {
     const handleActionClick = (action: ChatAction) => {
         if (action.type === "link") {
             window.location.href = action.value;
@@ -44,44 +58,36 @@ const ChatBubble = ({ message }: { message: ChatMessage }) => {
     };
 
     return (
-        <div className={`flex items-start mb-4 ${message.author === 'user' ? 'justify-end' : ''}`}>
-            {message.author === 'agent' && (
-                <Avatar className="mr-2">
-                    <AvatarImage alt="AI"/>
-                    <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-            )}
-            <div className="flex flex-col">
-                <div className={`rounded-lg p-2 ${message.author === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>
-                    <ReactMarkdown className="prose dark:prose-invert max-w-none">
-                        {message.message}
-                    </ReactMarkdown>
-                    {message.actions && (
-                        <div className="mt-2 flex gap-2">
-                            {message.actions.map((action, index) => (
-                                <Button
-                                    key={index}
-                                    variant={action.type === "link" ? "link" : "secondary"}
-                                    onClick={() => handleActionClick(action)}
-                                >
-                                    {action.name}
-                                </Button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <span className="text-xs text-gray-500 mt-1">
-                    {formatTimestamp(message.sent_at)}
-                </span>
+        <div className={`flex ${message.author === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`rounded-lg p-4 max-w-[80%] ${
+                message.author === 'user' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted'
+            }`}>
+                {message.isTyping ? (
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>AI is typing...</span>
+                    </div>
+                ) : (
+                    <>
+                        <div className="whitespace-pre-wrap">{message.message}</div>
+                        {message.actions && (
+                            <div className="mt-2 flex gap-2">
+                                {message.actions.map((action, index) => (
+                                    <Button
+                                        key={index}
+                                        variant={action.type === "link" ? "link" : "secondary"}
+                                        onClick={() => handleActionClick(action)}
+                                    >
+                                        {action.name}
+                                    </Button>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
-            {message.author === 'user' && (
-                <Avatar className="ml-2">
-                    <AvatarImage alt="User"/>
-                    <AvatarFallback>U</AvatarFallback>
-                </Avatar>
-            )}
         </div>
     );
-};
-
-export default ChatBubble;
+}

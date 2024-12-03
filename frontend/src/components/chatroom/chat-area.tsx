@@ -308,26 +308,25 @@ export default function ChatArea({ chatroomId }: ChatAreaProps) {
                     ) : (
                         messages.map((message) => (
                             <div key={message.id}>
-                                <ChatBubble
-                                    message={{
-                                        author: message.author,
-                                        message: message.message,
-                                        sent_at: new Date(message.sent_at),
-                                        actions: message.actions
-                                    }}
-                                />
-                                <div className="mt-2 space-y-2">
-                                    {message.tool_invocations?.map((tool, index) => (
-                                        tool.state === "result" && (
-                                            <ToolResultComponent
-                                                key={`${message.id}-${index}`}
-                                                tool={tool}
-                                                messageId={message.id}
-                                                accessToken={accessToken}
-                                            />
-                                        )
-                                    ))}
-                                </div>
+                                {message.tool_invocations && 
+                                 message.tool_invocations.length > 0 && 
+                                 message.tool_invocations[message.tool_invocations.length - 1].state === "result" ? (
+                                    <ToolResultComponent
+                                        key={`${message.id}-last`}
+                                        tool={message.tool_invocations[message.tool_invocations.length - 1]}
+                                        messageId={message.id}
+                                        accessToken={accessToken}
+                                    />
+                                ) : (
+                                    <ChatBubble
+                                        message={{
+                                            author: message.author,
+                                            message: message.message,
+                                            sent_at: new Date(message.sent_at),
+                                            actions: message.actions
+                                        }}
+                                    />
+                                )}
                             </div>
                         ))
                     )}

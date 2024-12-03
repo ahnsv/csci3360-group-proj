@@ -48,6 +48,10 @@ interface ScheduleRecommendation {
   recommendedSlot: TimeSlot | null
 }
 
+interface ScheduledTask extends SubTask {
+  selectedSlot?: TimeSlot;
+}
+
 export default function TaskEstimationForm({ taskName, courseName, closeForm, accessToken }: TaskEstimationFormProps) {
   const [step, setStep] = useState<'estimation' | 'planning'>('estimation')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
@@ -96,6 +100,7 @@ export default function TaskEstimationForm({ taskName, courseName, closeForm, ac
   const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([])
   const [scheduleRecommendations, setScheduleRecommendations] = useState<ScheduleRecommendation[]>([])
   const [currentSubtask, setCurrentSubtask] = useState<SubTask | null>(null)
+  const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -213,13 +218,61 @@ export default function TaskEstimationForm({ taskName, courseName, closeForm, ac
       .reduce((total, task) => total + task.estimatedTime, 0)
   }
 
-  const handleSubmit = () => {
-    toast({
-      title: "Success!",
-      description: "Your plan has been added to your calendar.",
-      duration: 3000,
-    })
-    closeForm()
+  const handleSubmit = async () => {
+    try {
+      const createEventPromises = scheduledTasks.map(async (task) => {
+        if (!task.selectedSlot) return null;
+
+        const [hours, minutes] = task.selectedSlot.start.split(':').map(Number)
+        const startDate = new Date(selectedDate)
+        startDate.setHours(hours, minutes, 0)
+
+        const endDate = new Date(startDate)
+        endDate.setMinutes(startDate.getMinutes() + task.estimatedTime)
+
+        const response = await fetch(`${API_URL}/auth/google/events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify([{
+            title: `${taskName}: ${task.title}`,
+            start_time: startDate.toISOString(),
+            end_time: endDate.toISOString(),
+            description: `Subtask for ${taskName} (${courseName})`
+          }])
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to create event: ${response.statusText}`)
+        }
+
+        return response.json()
+      })
+
+      const results = await Promise.all(createEventPromises)
+      const successfulEvents = results.filter(Boolean)
+
+      if (successfulEvents.length === 0) {
+        throw new Error('No events were created')
+      }
+
+      toast({
+        title: "Success!",
+        description: `Added ${successfulEvents.length} tasks to your calendar.`,
+        duration: 3000,
+      })
+      closeForm()
+    } catch (error) {
+      console.error('Error creating events:', error)
+      toast({
+        title: "Error",
+        description: "Failed to add tasks to calendar. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      })
+    }
   }
 
   const generateRecommendations = (timeSlots: TimeSlot[]) => {
@@ -396,7 +449,14 @@ export default function TaskEstimationForm({ taskName, courseName, closeForm, ac
                           className="w-full justify-start mb-2"
                           onClick={() => {
                             if (currentSubtask) {
-                              // Update the subtask as scheduled
+                              // Store the task with its selected time slot
+                              setScheduledTasks(prev => [...prev, {
+                                ...currentSubtask,
+                                selectedSlot: slot,
+                                scheduled: true
+                              }]);
+
+                              // Update the subtask as scheduled in original arrays
                               if (selectedRecommendedSubTasks.includes(currentSubtask)) {
                                 setSelectedRecommendedSubTasks(prev =>
                                   prev.map(task =>
@@ -410,7 +470,7 @@ export default function TaskEstimationForm({ taskName, courseName, closeForm, ac
                                   )
                                 )
                               }
-                              // Set next unscheduled subtask
+                              
                               setCurrentSubtask(getNextUnscheduledSubtask())
                             }
                           }}
